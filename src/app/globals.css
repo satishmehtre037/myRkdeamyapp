@@ -232,6 +232,10 @@ body {
   margin-left: 260px;
 }
 
+.dashboard-content {
+  padding: 32px;
+}
+
 /* ─── RESPONSIVE: Tablet (≤1024px) ─────────────── */
 @media (max-width: 1024px) {
   .dashboard-main {
@@ -264,7 +268,7 @@ body {
   }
   
   .dashboard-content {
-    padding: 20px 16px !important;
+    padding: 24px 20px !important;
   }
 
   /* Show mobile menu button */
