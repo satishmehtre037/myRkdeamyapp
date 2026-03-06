@@ -64,14 +64,12 @@ export default function FeeReceipt({ isOpen, onClose, data }: FeeReceiptProps) {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
-            color: white;
-            font-weight: 800;
-            font-size: 18px;
+            width: 180px;
+            height: 54px;
+            border-radius: 8px;
+            background: #111827;
             margin-bottom: 12px;
+            padding: 8px 16px;
           }
           .receipt-header h1 {
             font-size: 20px;
@@ -169,7 +167,9 @@ export default function FeeReceipt({ isOpen, onClose, data }: FeeReceiptProps) {
       <body>
         <div class="receipt">
           <div class="receipt-header">
-            <div class="logo-box">RK</div>
+            <div class="logo-box">
+              <img src="https://rkdemy.com/wp-content/uploads/2019/02/rkdemy-logo-white-1.png" style="height: 100%; width: 100%; object-fit: contain;" alt="RKDeamy Logo" />
+            </div>
             <h1>RKDeamy Classes</h1>
             <p>Fee Payment Receipt</p>
             <div class="receipt-number">${data.receiptNumber}</div>
@@ -324,12 +324,12 @@ export default function FeeReceipt({ isOpen, onClose, data }: FeeReceiptProps) {
                   {/* Logo + Title */}
                   <div style={{ textAlign: 'center', marginBottom: '24px', paddingBottom: '20px', borderBottom: '1px dashed rgba(99, 102, 241, 0.1)' }}>
                     <div style={{
-                      width: '44px', height: '44px', borderRadius: '12px',
-                      background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                      width: '180px', height: '54px', borderRadius: '8px',
+                      background: '#111827',
                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                      fontWeight: 800, fontSize: '16px', color: 'white', marginBottom: '10px',
+                      marginBottom: '10px', overflow: 'hidden', padding: '8px 16px'
                     }}>
-                      RK
+                      <img src="https://rkdemy.com/wp-content/uploads/2019/02/rkdemy-logo-white-1.png" alt="RKDeamy Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                     </div>
                     <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#e2e8f0' }}>RKDeamy Classes</h3>
                     <p style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>Fee Payment Receipt</p>

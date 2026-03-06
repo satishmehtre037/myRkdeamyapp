@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from './supabase';
 import type { Student, Batch, Payment, Installment, FeeAssignment, MonthlyRevenue } from './mock-data';
 
@@ -15,21 +16,24 @@ export async function getStudents(): Promise<Student[]> {
 
   if (error) throw error;
 
-  return (data || []).map((s: any) => ({
-    id: s.id,
-    name: s.name,
-    email: s.email || '',
-    phone: s.phone || '',
-    batch_id: s.batch_id || '',
-    batch_name: s.batches?.name || 'Unassigned',
-    joined_at: s.joined_at,
-    status: s.status,
-    avatar_url: s.avatar_url,
-    total_fee: s.fee_assignments?.[0]?.total_fee || 0,
-    paid_amount: s.fee_assignments?.[0]?.paid_amount || 0,
-    pending_amount: s.fee_assignments?.[0]?.pending_amount || 0,
-    payment_status: s.fee_assignments?.[0]?.status || 'due',
-  }));
+  return ((data as any[]) || []).map((s) => {
+    const feeAssn = Array.isArray(s.fee_assignments) ? s.fee_assignments[0] : s.fee_assignments;
+    return {
+      id: s.id,
+      name: s.name,
+      email: s.email || '',
+      phone: s.phone || '',
+      batch_id: s.batch_id || '',
+      batch_name: (s.batches as any)?.name || (s.batches as any)?.[0]?.name || 'Unassigned',
+      joined_at: s.joined_at,
+      status: s.status,
+      avatar_url: s.avatar_url,
+      total_fee: feeAssn?.total_fee || 0,
+      paid_amount: feeAssn?.paid_amount || 0,
+      pending_amount: feeAssn?.pending_amount || 0,
+      payment_status: feeAssn?.status || 'due',
+    };
+  });
 }
 
 export async function getStudentById(id: string): Promise<Student | null> {
@@ -45,20 +49,24 @@ export async function getStudentById(id: string): Promise<Student | null> {
 
   if (error) return null;
 
+  const feeAssn = Array.isArray((data as any).fee_assignments) 
+    ? (data as any).fee_assignments[0] 
+    : (data as any).fee_assignments;
+
   return {
     id: data.id,
     name: data.name,
     email: data.email || '',
     phone: data.phone || '',
     batch_id: data.batch_id || '',
-    batch_name: (data as any).batches?.name || 'Unassigned',
+    batch_name: (data as any).batches?.name || (data as any).batches?.[0]?.name || 'Unassigned',
     joined_at: data.joined_at,
     status: data.status,
     avatar_url: data.avatar_url,
-    total_fee: (data as any).fee_assignments?.[0]?.total_fee || 0,
-    paid_amount: (data as any).fee_assignments?.[0]?.paid_amount || 0,
-    pending_amount: (data as any).fee_assignments?.[0]?.pending_amount || 0,
-    payment_status: (data as any).fee_assignments?.[0]?.status || 'due',
+    total_fee: feeAssn?.total_fee || 0,
+    paid_amount: feeAssn?.paid_amount || 0,
+    pending_amount: feeAssn?.pending_amount || 0,
+    payment_status: feeAssn?.status || 'due',
   };
 }
 
@@ -94,14 +102,15 @@ export async function addStudent(student: {
           total_fee: batchData.total_fee,
           installment_count: 1, // Defaulting to 1 installment for simplicity
           paid_amount: 0,
+          status: 'due'
         })
         .select()
         .single();
-        
+
       if (feeAssignment) {
         // Create 1 initial installment due immediately
         const dueDate = new Date();
-        
+
         await supabase.from('installments').insert({
           fee_assignment_id: feeAssignment.id,
           student_id: createdStudent.id,
@@ -154,16 +163,16 @@ export async function getBatches(): Promise<Batch[]> {
   // Dynamically calculate student counts to guarantee accuracy
   const { data: studentsData } = await supabase.from('students').select('batch_id');
   const batchCounts: Record<string, number> = {};
-  
+
   if (studentsData) {
-    studentsData.forEach((s: any) => {
+    studentsData.forEach((s) => {
       if (s.batch_id) {
         batchCounts[s.batch_id] = (batchCounts[s.batch_id] || 0) + 1;
       }
     });
   }
 
-  return (batchesData || []).map((b: any) => ({
+  return (batchesData || []).map((b) => ({
     id: b.id,
     name: b.name,
     course_name: b.course_name,
@@ -224,15 +233,22 @@ export async function getPayments(): Promise<Payment[]> {
   const { data, error } = await supabase
     .from('payments')
     .select(`
-      id, student_id, amount, payment_date, payment_method, receipt_number, status, notes,
-      students ( name, batch_id, batches ( name ) ),
-      installments ( installment_number )
+      *,
+      students (
+        name,
+        batches (
+          name
+        )
+      ),
+      installments (
+        installment_number
+      )
     `)
     .order('payment_date', { ascending: false });
 
   if (error) throw error;
 
-  return (data || []).map((p: any) => ({
+  return ((data as any[]) || []).map((p) => ({
     id: p.id,
     student_id: p.student_id,
     student_name: p.students?.name || 'Unknown',
@@ -281,10 +297,10 @@ export async function addPayment(payment: {
   if (feeData) {
     const totalFee = Number(feeData.total_fee);
     const currentPaid = Number(feeData.paid_amount);
-    
+
     // Ensure we don't exceed total fee (cap at total_fee)
     const newPaid = Math.min(currentPaid + payment.amount, totalFee);
-    
+
     await supabase
       .from('fee_assignments')
       .update({
@@ -300,7 +316,7 @@ export async function addPayment(payment: {
 export async function deletePayment(id: string) {
   // First get the payment details to reverse it
   const { data: payment } = await supabase.from('payments').select('amount, student_id, installment_id').eq('id', id).single();
-  
+
   if (payment) {
     // Revert fee assignment paid_amount
     const { data: feeData } = await supabase
@@ -311,11 +327,13 @@ export async function deletePayment(id: string) {
 
     if (feeData) {
       const newPaid = Math.max(0, Number(feeData.paid_amount) - Number(payment.amount));
+      const totalFee = Number(feeData.total_fee);
+
       await supabase
         .from('fee_assignments')
         .update({
           paid_amount: newPaid,
-          status: newPaid >= Number(feeData.total_fee) ? 'paid' : newPaid > 0 ? 'partial' : 'due',
+          status: newPaid >= totalFee ? 'paid' : newPaid > 0 ? 'partial' : 'due',
         })
         .eq('id', feeData.id);
     }
@@ -352,12 +370,12 @@ export async function getFeeAssignments(): Promise<FeeAssignment[]> {
 
   if (error) throw error;
 
-  return (data || []).map((f: any) => ({
+  return (data as any[] || []).map((f) => ({
     id: f.id,
     student_id: f.student_id,
-    student_name: f.students?.name || 'Unknown',
+    student_name: f.students?.name || f.students?.[0]?.name || 'Unknown',
     batch_id: f.batch_id,
-    batch_name: f.batches?.name || 'Unknown',
+    batch_name: f.batches?.name || f.batches?.[0]?.name || 'Unknown',
     total_fee: Number(f.total_fee),
     installment_count: f.installment_count,
     paid_amount: Number(f.paid_amount),
@@ -461,8 +479,8 @@ export async function getStudentPayments(studentId: string): Promise<Payment[]> 
   const { data, error } = await supabase
     .from('payments')
     .select(`
-      id, student_id, amount, payment_date, payment_method, receipt_number, status,
-      students ( name, batches ( name ) ),
+      id, student_id, amount, payment_date, payment_method, receipt_number, status, notes,
+      students ( name, batch_id, batches ( name ) ),
       installments ( installment_number )
     `)
     .eq('student_id', studentId)
@@ -470,16 +488,16 @@ export async function getStudentPayments(studentId: string): Promise<Payment[]> 
 
   if (error) throw error;
 
-  return (data || []).map((p: any) => ({
+  return ((data as any[]) || []).map((p) => ({
     id: p.id,
     student_id: p.student_id,
     student_name: p.students?.name || 'Unknown',
-    batch_name: p.students?.batches?.name || 'Unknown',
+    batch_name: (p.students as any)?.batches?.name || 'Unknown',
     amount: Number(p.amount),
     payment_date: p.payment_date,
     payment_method: p.payment_method,
     receipt_number: p.receipt_number,
-    installment_number: p.installments?.installment_number || 0,
+    installment_number: (p.installments as any)?.installment_number || 0,
     status: p.status,
   }));
 }
@@ -519,7 +537,7 @@ export async function getMonthlyRevenue(): Promise<MonthlyRevenue[]> {
 
   const monthMap = new Map<string, { collected: number; pending: number }>();
 
-  (data || []).forEach((p: any) => {
+  (data || []).forEach((p) => {
     const date = new Date(p.payment_date);
     const key = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
     const current = monthMap.get(key) || { collected: 0, pending: 0 };
@@ -533,7 +551,7 @@ export async function getMonthlyRevenue(): Promise<MonthlyRevenue[]> {
     .select('amount, due_date')
     .in('status', ['due', 'overdue']);
 
-  (pendingData || []).forEach((i: any) => {
+  (pendingData || []).forEach((i) => {
     const date = new Date(i.due_date);
     const key = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
     const current = monthMap.get(key) || { collected: 0, pending: 0 };
@@ -542,7 +560,7 @@ export async function getMonthlyRevenue(): Promise<MonthlyRevenue[]> {
   });
 
   return Array.from(monthMap.entries())
-    .map(([month, values]) => ({ month, ...values }))
+    .map(([month, values]: [string, any]) => ({ month, ...values }))
     .slice(-7); // Last 7 months
 }
 
@@ -559,11 +577,11 @@ export async function getUpcomingDues() {
 
   if (error) throw error;
 
-  return (data || []).map((i: any) => ({
+  return (data as any[] || []).map((i) => ({
     id: i.id,
     student_id: i.students?.id,
-    student_name: i.students?.name || 'Unknown',
-    batch_name: i.students?.batches?.name || 'Unknown',
+    student_name: i.students?.name || i.students?.[0]?.name || 'Unknown',
+    batch_name: i.students?.batches?.name || i.students?.[0]?.batches?.name || 'Unknown',
     amount: Number(i.amount),
     due_date: i.due_date,
     status: i.status,
@@ -583,12 +601,16 @@ export async function getRecentPayments() {
 
   if (error) throw error;
 
-  return (data || []).map((p: any) => ({
+  return (data as any[] || []).map((p) => ({
     id: p.id,
-    student_name: p.students?.name || 'Unknown',
+    student_id: '',
+    student_name: p.students?.name || p.students?.[0]?.name || 'Unknown',
+    batch_name: '',
     amount: Number(p.amount),
     payment_date: p.payment_date,
     payment_method: p.payment_method,
+    receipt_number: '',
+    installment_number: 0,
     status: p.status,
   }));
 }

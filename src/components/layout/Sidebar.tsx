@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Wallet,
   X,
+  LogOut,
 } from 'lucide-react';
 import { useSidebar } from '@/app/dashboard/layout';
 
@@ -31,7 +32,13 @@ const bottomNavItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { isMobileOpen, setMobileOpen, isCollapsed, setCollapsed } = useSidebar();
+
+  const handleLogout = () => {
+    localStorage.removeItem('isLoggedIn');
+    router.push('/');
+  };
 
   const sidebarWidth = isCollapsed ? 72 : 260;
 
@@ -88,19 +95,15 @@ export default function Sidebar() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
-              width: '40px',
+              width: isCollapsed ? '40px' : '120px',
               height: '40px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 800,
-              fontSize: '16px',
-              color: 'white',
+              justifyContent: isCollapsed ? 'center' : 'flex-start',
               flexShrink: 0,
+              transition: 'width 0.2s',
             }}>
-              RK
+              <img src="https://rkdemy.com/wp-content/uploads/2019/02/rkdemy-logo-white-1.png" alt="RKDeamy Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
             </div>
             <AnimatePresence>
               {!isCollapsed && (
@@ -110,7 +113,7 @@ export default function Sidebar() {
                   exit={{ opacity: 0, x: -10 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <div style={{ fontWeight: 700, fontSize: '15px', color: '#e2e8f0', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontWeight: 700, fontSize: '15px', color: '#e2e8f0', whiteSpace: 'nowrap', display: 'none' }}>
                     RKDeamy
                   </div>
                   <div style={{ fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap' }}>
@@ -124,6 +127,7 @@ export default function Sidebar() {
           <button
             className="sidebar-close-btn"
             onClick={() => setMobileOpen(false)}
+            aria-label="Close sidebar"
             style={{
               display: 'none', // shown via CSS on mobile
               background: 'none',
@@ -235,12 +239,38 @@ export default function Sidebar() {
             );
           })}
 
+          {/* Logout Button */}
+          <motion.button
+            whileHover={{ scale: 1.02, background: 'rgba(239, 68, 68, 0.1)' }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleLogout}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: isCollapsed ? '10px 0' : '10px 12px',
+              justifyContent: isCollapsed ? 'center' : 'flex-start',
+              borderRadius: '10px',
+              cursor: 'pointer',
+              color: '#f87171',
+              width: '100%',
+              border: 'none',
+              background: 'transparent',
+              fontFamily: 'inherit',
+              marginTop: '8px',
+            }}
+          >
+            <LogOut size={20} />
+            {!isCollapsed && <span style={{ fontSize: '14px', fontWeight: 500 }}>Logout</span>}
+          </motion.button>
+
           {/* Collapse toggle — hidden on mobile */}
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setCollapsed(!isCollapsed)}
             className="collapse-toggle"
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             style={{
               display: 'flex',
               alignItems: 'center',

@@ -8,6 +8,7 @@ import { getStudentById, getStudentInstallments, getStudentPayments } from '@/li
 import type { Student, Installment, Payment } from '@/lib/mock-data';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import StatusBadge from '@/components/ui/StatusBadge';
+import FeeReceipt from '@/components/ui/FeeReceipt';
 import { useSearchParams } from 'next/navigation';
 import Script from 'next/script';
 
@@ -31,6 +32,7 @@ function StudentDashboard() {
   const [loading, setLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
   const [customAmounts, setCustomAmounts] = useState<Record<string, string>>({});
+  const [receiptPayment, setReceiptPayment] = useState<Payment | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -88,7 +90,7 @@ function StudentDashboard() {
     router.push('/student-portal');
   };
 
-  const handlePay = async (installment: Installment, amountOverride?: number) => {
+  const handlePay = async (installment: Installment | null, amountOverride?: number) => {
     if (!student) return;
 
     if (student.pending_amount <= 0) {
@@ -97,7 +99,7 @@ function StudentDashboard() {
     }
     
     // Check if script is loaded
-    if (!(window as any).Razorpay) {
+    if (!('Razorpay' in window)) {
       alert('Payment gateway is still loading. Please try again in a moment.');
       return;
     }
@@ -128,7 +130,7 @@ function StudentDashboard() {
         currency: orderConfig.currency,
         name: 'RKDeamy Classes',
         description: installment ? `Installment #${installment.installment_number}` : 'Remaining Course Balance',
-        image: 'https://i.imgur.com/3g7nmJC.png', // Or use your own logo URL
+        image: 'https://rkdemy.com/wp-content/uploads/2019/02/rkdemy-logo-white-1.png',
         order_id: orderConfig.id,
         prefill: {
           name: orderConfig.studentName || '',
@@ -138,7 +140,7 @@ function StudentDashboard() {
         theme: {
           color: '#38bdf8',
         },
-        handler: async function (response: any) {
+        handler: async function (response: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) {
           try {
             // 3. Verify Payment Signature Backend Route
             const verifyRes = await fetch('/api/verify-payment', {
@@ -168,9 +170,10 @@ function StudentDashboard() {
         },
       };
 
-      const rzp = new (window as any).Razorpay(options);
+      const Razorpay = (window as unknown as { Razorpay: new (options: unknown) => { on: (event: string, handler: (response: { error: { description: string } }) => void) => void; open: () => void } }).Razorpay;
+      const rzp = new Razorpay(options);
       
-      rzp.on('payment.failed', function (response: any){
+      rzp.on('payment.failed', function (response: { error: { description: string } }){
         alert(`Payment Failed: ${response.error.description}`);
       });
 
@@ -215,15 +218,13 @@ function StudentDashboard() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
-            width: '40px', height: '40px', borderRadius: '12px',
-            background: 'linear-gradient(135deg, #38bdf8, #818cf8)',
+            height: '40px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 15px rgba(56, 189, 248, 0.3)',
           }}>
-            <GraduationCap size={20} color="white" />
+            <img src="https://rkdemy.com/wp-content/uploads/2019/02/rkdemy-logo-white-1.png" alt="RKDeamy" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
           </div>
           <div>
-            <h1 style={{ fontSize: '18px', fontWeight: 700, color: '#f8fafc', margin: 0 }}>RKDeamy Classes</h1>
+            <h1 style={{ fontSize: '18px', fontWeight: 700, color: '#f8fafc', margin: 0, display: 'none' }}>RKDeamy Classes</h1>
             <p style={{ fontSize: '12px', color: '#94a3b8', margin: 0 }}>Student Portal</p>
           </div>
         </div>
@@ -276,7 +277,7 @@ function StudentDashboard() {
             </div>
           </motion.div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px', '@media (min-width: 1024px)': { gridTemplateColumns: '1fr 1fr' } } as any}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }} className="w-full">
             
             {/* Installments & Action Card */}
             <motion.div variants={itemVariants} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -387,7 +388,7 @@ function StudentDashboard() {
                           </div>
                           <motion.button 
                             whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                            onClick={() => handlePay(null as any, customAmounts['general'] ? Number(customAmounts['general']) : student.pending_amount)}
+                            onClick={() => handlePay(null, customAmounts['general'] ? Number(customAmounts['general']) : student.pending_amount)}
                             style={{ 
                               background: 'linear-gradient(135deg, #38bdf8, #2563eb)', 
                               border: 'none', 
@@ -503,11 +504,24 @@ function StudentDashboard() {
                         onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(15, 23, 42, 0.4)')}
                         onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                       >
-                        <div>
+                        <div style={{ flex: 1 }}>
                           <div style={{ fontSize: '14px', fontWeight: 600, color: '#f8fafc', marginBottom: '2px' }}>{formatCurrency(payment.amount)}</div>
                           <div style={{ fontSize: '12px', color: '#94a3b8', fontFamily: 'monospace' }}>Receipt: {payment.receipt_number}</div>
                         </div>
-                        <div style={{ textAlign: 'right' }}>
+                        <div style={{ flex: 1, textAlign: 'center' }}>
+                          <motion.button 
+                            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                            onClick={() => setReceiptPayment(payment)}
+                            style={{ 
+                              background: 'rgba(129, 140, 248, 0.1)', border: '1px solid rgba(129, 140, 248, 0.2)', 
+                              padding: '6px 12px', borderRadius: '8px', color: '#818cf8', 
+                              fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px'
+                            }}
+                          >
+                            <Receipt size={14} /> View Receipt
+                          </motion.button>
+                        </div>
+                        <div style={{ flex: 1, textAlign: 'right' }}>
                           <StatusBadge status={payment.status} size="sm" />
                           <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>{formatDate(payment.payment_date)}</div>
                         </div>
@@ -526,6 +540,24 @@ function StudentDashboard() {
           </div>
         </motion.div>
       </main>
+
+      {receiptPayment && (
+        <FeeReceipt 
+          isOpen={true} 
+          onClose={() => setReceiptPayment(null)}
+          data={{ 
+            receiptNumber: receiptPayment.receipt_number, 
+            studentName: student.name, 
+            studentEmail: student.email || '', 
+            studentPhone: student.phone || '', 
+            batchName: student.batch_name, 
+            amount: receiptPayment.amount, 
+            paymentDate: receiptPayment.payment_date, 
+            paymentMethod: receiptPayment.payment_method, 
+            installmentNumber: receiptPayment.installment_number 
+          }}
+        />
+      )}
     </div>
   );
 }

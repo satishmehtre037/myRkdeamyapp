@@ -31,6 +31,7 @@ export default function TopBar() {
         whileTap={{ scale: 0.95 }}
         onClick={() => setMobileOpen(true)}
         className="mobile-menu-btn"
+        aria-label="Open mobile menu"
         style={{
           display: 'none', // shown via CSS on mobile
           background: 'rgba(30, 41, 59, 0.5)',
@@ -104,6 +105,7 @@ export default function TopBar() {
             alignItems: 'center',
             justifyContent: 'center',
           }}
+          aria-label="Notifications"
         >
           <Bell size={18} />
           <span style={{
@@ -158,7 +160,7 @@ export default function TopBar() {
           </div>
           <div className="profile-info">
             <div style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0' }}>Admin</div>
-            <div style={{ fontSize: '11px', color: '#64748b' }}>admin@rkdeamy.com</div>
+            <div style={{ fontSize: '11px', color: '#64748b' }}>admin@gmail.com</div>
           </div>
           <ChevronDown size={14} style={{ color: '#64748b' }} className="profile-chevron" />
         </motion.div>

@@ -41,8 +41,8 @@ export default function StudentLoginPage() {
       // Redirect to student dashboard
       router.push('/student-portal/dashboard');
       
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during login');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred during login');
     } finally {
       setLoading(false);
     }
@@ -112,20 +112,12 @@ export default function StudentLoginPage() {
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
             style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '20px',
-              background: 'linear-gradient(135deg, #38bdf8, #818cf8)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
               marginBottom: '16px',
-              boxShadow: '0 10px 25px rgba(56, 189, 248, 0.3)',
             }}
           >
-            <GraduationCap size={32} color="white" />
+            <img src="https://rkdemy.com/wp-content/uploads/2019/02/rkdemy-logo-white-1.png" alt="RKDeamy Logo" style={{ height: '48px', width: 'auto', objectFit: 'contain', margin: '0 auto' }} />
           </motion.div>
-          <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#f8fafc', marginBottom: '8px' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#f8fafc', marginBottom: '8px', display: 'none' }}>
             Student Portal
           </h1>
           <p style={{ fontSize: '14px', color: '#94a3b8' }}>

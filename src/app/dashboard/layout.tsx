@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, createContext, useContext } from 'react';
+import React, { useState, createContext, useContext, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/layout/Sidebar';
 import TopBar from '@/components/layout/TopBar';
 
@@ -29,6 +30,50 @@ export default function DashboardLayout({
 }) {
   const [isMobileOpen, setMobileOpen] = useState(false);
   const [isCollapsed, setCollapsed] = useState(false);
+  const [authState, setAuthState] = useState<{
+    isLoading: boolean;
+    isAuthenticated: boolean;
+  }>({
+    isLoading: true,
+    isAuthenticated: false,
+  });
+  const router = useRouter();
+
+  useEffect(() => {
+    // Check for the specific admin token instead of a generic isLoggedIn
+    const isAdminLoggedIn = localStorage.getItem('adminAuth') === 'true';
+    
+    // Clear old generic tokens if they exist strictly for security
+    localStorage.removeItem('isLoggedIn');
+
+    // Defer the state update to the next tick to avoid synchronous cascading renders
+    const timeoutId = setTimeout(() => {
+      setAuthState({ isLoading: false, isAuthenticated: isAdminLoggedIn });
+      
+      if (!isAdminLoggedIn) {
+        router.push('/');
+      }
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [router]);
+
+  if (authState.isLoading || !authState.isAuthenticated) {
+    return (
+      <div className="loading-container">
+        <div 
+          className="spin"
+          style={{
+            width: '40px',
+            height: '40px',
+            border: '3px solid rgba(99, 102, 241, 0.15)',
+            borderTop: '3px solid #6366f1',
+            borderRadius: '50%',
+          }} 
+        />
+      </div>
+    );
+  }
 
   return (
     <SidebarContext.Provider value={{ isMobileOpen, setMobileOpen, isCollapsed, setCollapsed }}>
