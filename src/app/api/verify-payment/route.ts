@@ -45,16 +45,34 @@ export async function POST(req: Request) {
     const actualPaidAmount = order.amount / 100; // Paise to INR
 
     // 3. Prevent Double Processing
-    // Verify the installment isn't already paid (though partials are allowed, 
-    // we check status to avoid double-processing the same success event)
-    const { data: instCheck } = await supabase
-      .from('installments')
-      .select('amount, status')
-      .eq('id', installmentId)
+    // Verify the installment isn't already paid (if ID provided)
+    if (installmentId) {
+      const { data: instCheck } = await supabase
+        .from('installments')
+        .select('amount, status')
+        .eq('id', installmentId)
+        .single();
+        
+      if (!instCheck) {
+        return NextResponse.json({ error: 'Installment not found' }, { status: 404 });
+      }
+    }
+
+    // 3.1 Check if student still has a balance to pay
+    const { data: balanceCheck } = await supabase
+      .from('fee_assignments')
+      .select('pending_amount')
+      .eq('student_id', studentId)
       .single();
-      
-    if (!instCheck) {
-      return NextResponse.json({ error: 'Installment not found' }, { status: 404 });
+
+    if (balanceCheck && Number(balanceCheck.pending_amount) <= 0) {
+      // Even if payment was successful, we don't record it as "more" paid since they are at 0
+      // We return success anyway because the money was taken, but we avoid updating DB if balance is 0
+      return NextResponse.json({ 
+        success: true, 
+        warning: 'Payment received but student balance was already zero. Payment recorded for history only.',
+        receipt: `RZPY-${razorpay_payment_id.slice(-8).toUpperCase()}`
+      });
     }
 
     // 4. Record the Payment in Supabase

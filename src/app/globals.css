@@ -1,6 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
+html {
+  scroll-behavior: smooth;
+}
+
 @theme inline {
   --color-background: #0a0e1a;
   --color-foreground: #e2e8f0;
@@ -36,23 +40,25 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom Scrollbar */
+/* Custom Premium Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-surface);
+  background: rgba(15, 23, 42, 0.3);
+  backdrop-filter: blur(8px);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-surface-lighter);
-  border-radius: 3px;
+  background: linear-gradient(180deg, #38bdf8, #2563eb);
+  border-radius: 100px;
+  border: 2px solid rgba(15, 23, 42, 0.1);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-muted);
+  background: linear-gradient(180deg, #7dd3fc, #3b82f6);
 }
 
 /* Glassmorphism utility */

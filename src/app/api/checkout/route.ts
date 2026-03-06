@@ -22,8 +22,8 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { installmentId, studentId, amount } = body;
 
-    if (!installmentId || !studentId) {
-      return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
+    if (!studentId) {
+      return NextResponse.json({ error: 'Missing student identifier' }, { status: 400 });
     }
 
     let razorpay;
@@ -33,19 +33,34 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: e.message }, { status: 500 });
     }
 
-    // 1. Fetch exact amount and details from DB to prevent tampering
-    const { data: installment, error: instError } = await supabase
-      .from('installments')
-      .select('amount, status, students(id, name, email, phone)')
-      .eq('id', installmentId)
-      .single();
+    // 1. Fetch details. If installmentId is provided, use it. 
+    // Otherwise, just get any installment to get student details.
+    let installment_data = null;
+    let students_data = null;
 
-    if (instError || !installment) {
-      return NextResponse.json({ error: 'Installment not found' }, { status: 404 });
+    if (installmentId) {
+      const { data, error } = await supabase
+        .from('installments')
+        .select('amount, status, students(id, name, email, phone)')
+        .eq('id', installmentId)
+        .single();
+      installment_data = data;
     }
 
-    if (installment.status === 'paid') {
-      return NextResponse.json({ error: 'Installment is already paid' }, { status: 400 });
+    // Always fetch student details to ensure we have them
+    const { data: student, error: studentError } = await supabase
+      .from('students')
+      .select('id, name, email, phone')
+      .eq('id', studentId)
+      .single();
+
+    if (studentError || !student) {
+      return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+    }
+    students_data = student;
+
+    if (installmentId && installment_data?.status === 'paid' && !amount) {
+      return NextResponse.json({ error: 'This specific installment is already paid.' }, { status: 400 });
     }
 
     // 2. Fetch student's remaining balance to prevent overpayment
@@ -66,8 +81,7 @@ export async function POST(req: Request) {
 
     // Determine the final amount to charge
     // If a custom amount is passed, use it; otherwise use the installment amount.
-    // In both cases, we MUST cap it by the total actual pending amount to avoid overpayment.
-    const requestedAmount = amount ? Number(amount) : Number(installment.amount);
+    const requestedAmount = amount ? Number(amount) : (installment_data ? Number(installment_data.amount) : pendingAmount);
     
     if (requestedAmount <= 0) {
       return NextResponse.json({ error: 'Payment amount must be greater than zero' }, { status: 400 });
@@ -82,10 +96,10 @@ export async function POST(req: Request) {
     const options = {
       amount: amountInPaise,
       currency: 'INR',
-      receipt: `rcptid_${installmentId.slice(0, 10)}`, // unique receipt id
+      receipt: `rcptid_${(installmentId || studentId).slice(0, 10)}`, // unique receipt id
       notes: {
         studentId: studentId,
-        installmentId: installmentId,
+        installmentId: installmentId || '',
       }
     };
 
@@ -96,9 +110,9 @@ export async function POST(req: Request) {
       id: order.id,
       amount: order.amount,
       currency: order.currency,
-      studentName: (installment.students as any)?.[0]?.name || (installment.students as any)?.name,
-      studentEmail: (installment.students as any)?.[0]?.email || (installment.students as any)?.email,
-      studentPhone: (installment.students as any)?.[0]?.phone || (installment.students as any)?.phone,
+      studentName: students_data.name,
+      studentEmail: students_data.email,
+      studentPhone: students_data.phone,
     });
   } catch (err: any) {
     console.error('Razorpay Order Creation Error:', err);

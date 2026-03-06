@@ -279,12 +279,17 @@ export async function addPayment(payment: {
     .single();
 
   if (feeData) {
-    const newPaid = Number(feeData.paid_amount) + payment.amount;
+    const totalFee = Number(feeData.total_fee);
+    const currentPaid = Number(feeData.paid_amount);
+    
+    // Ensure we don't exceed total fee (cap at total_fee)
+    const newPaid = Math.min(currentPaid + payment.amount, totalFee);
+    
     await supabase
       .from('fee_assignments')
       .update({
         paid_amount: newPaid,
-        status: newPaid >= Number(feeData.total_fee) ? 'paid' : newPaid > 0 ? 'partial' : 'due',
+        status: newPaid >= totalFee ? 'paid' : newPaid > 0 ? 'partial' : 'due',
       })
       .eq('id', feeData.id);
   }

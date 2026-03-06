@@ -29,7 +29,16 @@ function StudentDashboard() {
   const [installments, setInstallments] = useState<Installment[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [scrolled, setScrolled] = useState(false);
   const [customAmounts, setCustomAmounts] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Handle Return Messages strictly via URL redirects/errors if needed
   useEffect(() => {
@@ -99,7 +108,7 @@ function StudentDashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          installmentId: installment.id,
+          installmentId: installment?.id || null,
           studentId: student.id,
           amount: amountOverride
         })
@@ -118,7 +127,7 @@ function StudentDashboard() {
         amount: orderConfig.amount,
         currency: orderConfig.currency,
         name: 'RKDeamy Classes',
-        description: `Installment #${installment.installment_number}`,
+        description: installment ? `Installment #${installment.installment_number}` : 'Remaining Course Balance',
         image: 'https://i.imgur.com/3g7nmJC.png', // Or use your own logo URL
         order_id: orderConfig.id,
         prefill: {
@@ -140,7 +149,7 @@ function StudentDashboard() {
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_signature: response.razorpay_signature,
                 studentId: student.id,
-                installmentId: installment.id,
+                installmentId: installment?.id || null,
               })
             });
 
@@ -192,16 +201,17 @@ function StudentDashboard() {
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       {/* Dynamic Top Bar */}
       <header style={{ 
-        background: 'rgba(15, 23, 42, 0.8)', 
+        background: scrolled ? 'rgba(15, 23, 42, 0.95)' : 'rgba(15, 23, 42, 0.8)', 
         backdropFilter: 'blur(16px)', 
-        borderBottom: '1px solid rgba(148, 163, 184, 0.1)', 
-        padding: '16px 24px', 
+        borderBottom: `1px solid ${scrolled ? 'rgba(56, 189, 248, 0.2)' : 'rgba(148, 163, 184, 0.1)'}`, 
+        padding: scrolled ? '12px 24px' : '16px 24px', 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
         position: 'sticky',
         top: 0,
-        zIndex: 40
+        zIndex: 40,
+        transition: 'all 0.3s ease'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
@@ -237,7 +247,7 @@ function StudentDashboard() {
         <motion.div variants={containerVariants} initial="hidden" animate="visible" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
           {/* Welcome & Overview Card */}
-          <motion.div variants={itemVariants} style={{
+          <motion.div variants={itemVariants} className="glass-3d hover-3d" style={{
             background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9))',
             border: '1px solid rgba(56, 189, 248, 0.15)',
             borderRadius: '20px',
@@ -275,7 +285,7 @@ function StudentDashboard() {
               </h3>
 
               {/* Pending Dues */}
-              {pendingInstallments.length > 0 ? (
+              {(pendingInstallments.length > 0 || Number(student.pending_amount) > 0) ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {pendingInstallments.map(inst => (
                     <div key={inst.id} style={{ 
@@ -315,18 +325,18 @@ function StudentDashboard() {
                             />
                           </div>
                           <motion.button 
-                            whileHover={student.pending_amount > 0 ? { scale: 1.05 } : {}} whileTap={student.pending_amount > 0 ? { scale: 0.95 } : {}}
-                            onClick={() => student.pending_amount > 0 && handlePay(inst, customAmounts[inst.id] ? Number(customAmounts[inst.id]) : undefined)}
-                            disabled={student.pending_amount <= 0}
+                            whileHover={Number(student.pending_amount) > 0 ? { scale: 1.05 } : {}} whileTap={Number(student.pending_amount) > 0 ? { scale: 0.95 } : {}}
+                            onClick={() => Number(student.pending_amount) > 0 && handlePay(inst, customAmounts[inst.id] ? Number(customAmounts[inst.id]) : undefined)}
+                            disabled={Number(student.pending_amount) <= 0}
                             style={{ 
-                              background: student.pending_amount > 0 ? 'linear-gradient(135deg, #38bdf8, #2563eb)' : 'rgba(148, 163, 184, 0.1)', 
+                              background: Number(student.pending_amount) > 0 ? 'linear-gradient(135deg, #38bdf8, #2563eb)' : 'rgba(148, 163, 184, 0.1)', 
                               border: 'none', 
-                              padding: '10px 20px', borderRadius: '10px', color: student.pending_amount > 0 ? 'white' : '#64748b', 
-                              fontSize: '14px', fontWeight: 600, cursor: student.pending_amount > 0 ? 'pointer' : 'not-allowed', 
-                              boxShadow: student.pending_amount > 0 ? '0 4px 15px rgba(56, 189, 248, 0.3)' : 'none' 
+                              padding: '10px 20px', borderRadius: '10px', color: Number(student.pending_amount) > 0 ? 'white' : '#64748b', 
+                              fontSize: '14px', fontWeight: 600, cursor: Number(student.pending_amount) > 0 ? 'pointer' : 'not-allowed', 
+                              boxShadow: Number(student.pending_amount) > 0 ? '0 4px 15px rgba(56, 189, 248, 0.3)' : 'none' 
                             }}
                           >
-                            {student.pending_amount <= 0 ? 'Paid' : customAmounts[inst.id] ? `Pay Custom` : 'Pay Full'}
+                            {Number(student.pending_amount) <= 0 ? 'Paid' : customAmounts[inst.id] ? `Pay Custom` : 'Pay Full'}
                           </motion.button>
                         </div>
                         <p style={{ fontSize: '11px', color: '#64748b', margin: 0, textAlign: 'right' }}>
@@ -335,6 +345,66 @@ function StudentDashboard() {
                       </div>
                     </div>
                   ))}
+
+                  {/* Fallback for general balance if no installments are pending OR if force showing is needed */}
+                  {Number(student.pending_amount) > 0 && (
+                    <div style={{ 
+                      background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9))', 
+                      border: '1px solid rgba(56, 189, 248, 0.3)', 
+                      borderRadius: '16px', padding: '20px', display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'space-between', alignItems: 'center',
+                      marginTop: pendingInstallments.length > 0 ? '12px' : 0
+                    }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          <span style={{ fontSize: '14px', fontWeight: 600, color: '#f8fafc' }}>Remaining Course Balance</span>
+                          <StatusBadge status="due" size="sm" />
+                        </div>
+                        <div style={{ fontSize: '13px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <AlertCircle size={14} /> Final outstanding amount to be cleared
+                        </div>
+                      </div>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '240px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ position: 'relative', flex: 1 }}>
+                            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '14px' }}>₹</span>
+                            <input 
+                              type="number"
+                              placeholder="Amount to pay"
+                              value={customAmounts['general'] || ''}
+                              onChange={(e) => setCustomAmounts({ ...customAmounts, general: e.target.value })}
+                              style={{
+                                width: '100%',
+                                background: 'rgba(15, 23, 42, 0.4)',
+                                border: '1px solid rgba(148, 163, 184, 0.1)',
+                                borderRadius: '10px',
+                                padding: '10px 12px 10px 24px',
+                                color: '#f8fafc',
+                                fontSize: '13px',
+                                outline: 'none'
+                              }}
+                            />
+                          </div>
+                          <motion.button 
+                            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                            onClick={() => handlePay(null as any, customAmounts['general'] ? Number(customAmounts['general']) : student.pending_amount)}
+                            style={{ 
+                              background: 'linear-gradient(135deg, #38bdf8, #2563eb)', 
+                              border: 'none', 
+                              padding: '10px 20px', borderRadius: '10px', color: 'white', 
+                              fontSize: '14px', fontWeight: 600, cursor: 'pointer', 
+                              boxShadow: '0 4px 15px rgba(56, 189, 248, 0.3)' 
+                            }}
+                          >
+                            {customAmounts['general'] ? `Pay Custom` : 'Pay Balance'}
+                          </motion.button>
+                        </div>
+                        <p style={{ fontSize: '11px', color: '#64748b', margin: 0, textAlign: 'right' }}>
+                          Total Remaining: {formatCurrency(student.pending_amount)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div style={{ background: 'rgba(30, 41, 59, 0.6)', border: '1px solid rgba(52, 211, 153, 0.2)', borderRadius: '16px', padding: '24px', textAlign: 'center' }}>
@@ -343,6 +413,7 @@ function StudentDashboard() {
                   <p style={{ fontSize: '13px', color: '#94a3b8' }}>You have no pending fee dues.</p>
                 </div>
               )}
+
 
               {/* Upcoming */}
               {upcomingInstallments.length > 0 && (
@@ -401,7 +472,13 @@ function StudentDashboard() {
             </motion.div>
 
             {/* Payment History Card */}
-            <motion.div variants={itemVariants} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}
+            >
               <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Receipt size={20} color="#818cf8" /> Payment History
               </h3>
@@ -413,12 +490,18 @@ function StudentDashboard() {
                 {payments.length > 0 ? (
                   <div>
                     {payments.map((payment, idx) => (
-                      <div key={payment.id} style={{ 
-                        padding: '16px 20px', borderBottom: idx !== payments.length - 1 ? '1px solid rgba(148, 163, 184, 0.08)' : 'none',
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'background 0.2s'
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(15, 23, 42, 0.4)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                      <motion.div 
+                        key={payment.id} 
+                        initial={{ opacity: 0, x: -10 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: idx * 0.05 }}
+                        style={{ 
+                          padding: '16px 20px', borderBottom: idx !== payments.length - 1 ? '1px solid rgba(148, 163, 184, 0.08)' : 'none',
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'background 0.2s'
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(15, 23, 42, 0.4)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                       >
                         <div>
                           <div style={{ fontSize: '14px', fontWeight: 600, color: '#f8fafc', marginBottom: '2px' }}>{formatCurrency(payment.amount)}</div>
@@ -428,7 +511,7 @@ function StudentDashboard() {
                           <StatusBadge status={payment.status} size="sm" />
                           <div style={{ fontSize: '12px', color: '#64748b', marginTop: '6px' }}>{formatDate(payment.payment_date)}</div>
                         </div>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 ) : (

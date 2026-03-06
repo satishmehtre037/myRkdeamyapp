@@ -138,10 +138,17 @@ export default function DashboardPage() {
       {/* Charts + Payment Status */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '20px', marginBottom: '28px' }}>
         {/* Revenue Chart */}
-        <motion.div variants={itemVariants} className="glass-3d hover-3d" style={{
-          borderRadius: '16px',
-          padding: '24px',
-        }}>
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-50px" }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="glass-3d hover-3d" 
+          style={{
+            borderRadius: '16px',
+            padding: '24px',
+          }}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <div>
               <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#e2e8f0' }}>Revenue Analytics</h3>
@@ -190,10 +197,17 @@ export default function DashboardPage() {
         </motion.div>
 
         {/* Payment Status */}
-        <motion.div variants={itemVariants} className="glass-3d" style={{
-          borderRadius: '16px',
-          padding: '24px',
-        }}>
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true, margin: "-50px" }}
+          transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+          className="glass-3d" 
+          style={{
+            borderRadius: '16px',
+            padding: '24px',
+          }}
+        >
           <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#e2e8f0', marginBottom: '20px' }}>Payment Status</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {[
@@ -234,7 +248,13 @@ export default function DashboardPage() {
       </div>
 
       {/* Recent Payments + Upcoming Dues */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+      <motion.div 
+        initial={{ opacity: 0, y: 40 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.7, ease: "easeOut" }}
+        style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}
+      >
         {/* Recent Payments */}
         <motion.div variants={itemVariants} className="glass-3d hover-3d" style={{
           borderRadius: '16px',
