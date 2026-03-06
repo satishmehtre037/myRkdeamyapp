@@ -38,7 +38,6 @@ export default function DashboardLayout({
           className="dashboard-main"
           style={{
             flex: 1,
-            marginLeft: '260px',
             display: 'flex',
             flexDirection: 'column',
             transition: 'margin-left 0.3s ease',
@@ -47,7 +46,6 @@ export default function DashboardLayout({
           <TopBar />
           <main style={{
             flex: 1,
-            padding: '28px 32px',
             overflowY: 'auto',
           }}
           className="dashboard-content"

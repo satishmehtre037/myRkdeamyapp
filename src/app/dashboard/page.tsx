@@ -136,7 +136,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Charts + Payment Status */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '20px', marginBottom: '28px' }}>
+      <div className="responsive-grid-main" style={{ marginBottom: '28px' }}>
         {/* Revenue Chart */}
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
@@ -253,7 +253,7 @@ export default function DashboardPage() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: "-100px" }}
         transition={{ duration: 0.7, ease: "easeOut" }}
-        style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}
+        className="responsive-grid-2"
       >
         {/* Recent Payments */}
         <motion.div variants={itemVariants} className="glass-3d hover-3d" style={{

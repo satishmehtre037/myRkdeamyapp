@@ -213,6 +213,31 @@ body {
   animation: float 6s ease-in-out infinite;
 }
 
+/* ─── RESPONSIVE UTILITIES ────────────────────── */
+.responsive-grid-main {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 20px;
+}
+
+.responsive-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 1024px) {
+  .responsive-grid-main {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .responsive-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ─── RESPONSIVE: Desktop ─────────────────────── */
 .dashboard-main {
   margin-left: 260px;
@@ -247,6 +272,10 @@ body {
   }
   .topbar {
     padding: 0 16px !important;
+  }
+  
+  .dashboard-content {
+    padding: 20px 16px !important;
   }
 
   /* Show mobile menu button */
