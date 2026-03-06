@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { LogOut, GraduationCap, Calendar, Clock, CreditCard, Receipt, AlertCircle, CheckCircle2 } from 'lucide-react';
@@ -14,7 +14,15 @@ import Script from 'next/script';
 const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
 const itemVariants = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4 } } };
 
-export default function StudentDashboard() {
+export default function StudentDashboardPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Loading...</div>}>
+      <StudentDashboard />
+    </Suspense>
+  );
+}
+
+function StudentDashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [student, setStudent] = useState<Student | null>(null);

@@ -69,9 +69,9 @@ export async function POST(req: Request) {
       id: order.id,
       amount: order.amount,
       currency: order.currency,
-      studentName: installment.students?.name,
-      studentEmail: installment.students?.email,
-      studentPhone: installment.students?.phone,
+      studentName: (installment.students as any)?.[0]?.name || (installment.students as any)?.name,
+      studentEmail: (installment.students as any)?.[0]?.email || (installment.students as any)?.email,
+      studentPhone: (installment.students as any)?.[0]?.phone || (installment.students as any)?.phone,
     });
   } catch (err: any) {
     console.error('Razorpay Order Creation Error:', err);
