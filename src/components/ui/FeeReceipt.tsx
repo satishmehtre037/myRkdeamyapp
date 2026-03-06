@@ -40,7 +40,13 @@ export default function FeeReceipt({ isOpen, onClose, data }: FeeReceiptProps) {
         <title>Fee Receipt - ${data.receiptNumber}</title>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-          * { margin: 0; padding: 0; box-sizing: border-box; }
+          * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
           body {
             font-family: 'Inter', sans-serif;
             background: #fff;
