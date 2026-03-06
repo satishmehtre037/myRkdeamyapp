@@ -1,21 +1,6 @@
 import { NextResponse } from 'next/server';
-import Razorpay from 'razorpay';
+import axios from 'axios';
 import { supabase } from '@/lib/supabase';
-
-// Helper to initialize Razorpay conditionally to prevent crashes if keys are missing
-const getRazorpayInstance = () => {
-  const key_id = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-  const key_secret = process.env.RAZORPAY_KEY_SECRET;
-
-  if (!key_id || !key_secret) {
-    throw new Error('Razorpay keys are not configured in .env.local');
-  }
-
-  return new Razorpay({
-    key_id,
-    key_secret,
-  });
-};
 
 export async function POST(req: Request) {
   try {
@@ -26,11 +11,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
     }
 
-    let razorpay;
-    try {
-      razorpay = getRazorpayInstance();
-    } catch (e: any) {
-      return NextResponse.json({ error: e.message }, { status: 500 });
+    const appId = process.env.CASHFREE_APP_ID;
+    const secretKey = process.env.CASHFREE_SECRET_KEY;
+    const environment = process.env.CASHFREE_ENVIRONMENT || 'SANDBOX'; // PRODUCTION or SANDBOX
+
+    if (!appId || !secretKey) {
+      return NextResponse.json({ error: 'Cashfree keys are not configured in .env.local' }, { status: 500 });
     }
 
     // 1. Fetch exact amount and details from DB to prevent tampering
@@ -48,35 +34,53 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Installment is already paid' }, { status: 400 });
     }
 
-    // 2. Create Razorpay Order
-    // Razorpay amount is in paise (1 INR = 100 paise)
-    const amountInPaise = Math.round(Number(installment.amount) * 100);
+    // 2. Create Cashfree Order
+    const orderId = `order_${installmentId.slice(0, 8)}_${Date.now()}`;
+    const amount = Number(installment.amount);
+    
+    // Fallbacks if student data is missing
+    const customerId = studentId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 50); // Cashfree requires alphanumeric customer_id <= 50 chars
+    const customerPhone = installment.students?.phone?.replace(/\D/g, '').slice(-10) || '9999999999';
+    const customerEmail = installment.students?.email || 'student@rkdeamy.com';
+    const customerName = installment.students?.name || 'Student';
 
-    const options = {
-      amount: amountInPaise,
-      currency: 'INR',
-      receipt: `rcptid_${installmentId.slice(0, 10)}`, // unique receipt id
-      notes: {
-        studentId: studentId,
-        installmentId: installmentId,
+    const baseUrl = environment === 'PRODUCTION' 
+      ? 'https://api.cashfree.com/pg/orders' 
+      : 'https://sandbox.cashfree.com/pg/orders';
+
+    const response = await axios.post(baseUrl, {
+      order_id: orderId,
+      order_amount: amount,
+      order_currency: 'INR',
+      customer_details: {
+        customer_id: customerId,
+        customer_name: customerName,
+        customer_email: customerEmail,
+        customer_phone: customerPhone,
+      },
+      order_meta: {
+        return_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/student-portal/dashboard?order_id={order_id}`,
+      },
+      order_note: `Installment Payment - ${installmentId}`
+    }, {
+      headers: {
+        'x-client-id': appId,
+        'x-client-secret': secretKey,
+        'x-api-version': '2023-08-01',
+        'Content-Type': 'application/json',
       }
-    };
-
-    const order = await razorpay.orders.create(options);
-
-    // Return the required order details to the frontend
-    return NextResponse.json({ 
-      id: order.id,
-      amount: order.amount,
-      currency: order.currency,
-      studentName: installment.students?.name,
-      studentEmail: installment.students?.email,
-      studentPhone: installment.students?.phone,
     });
+
+    // Return the required session ID to the frontend to launch modal
+    return NextResponse.json({ 
+      payment_session_id: response.data.payment_session_id,
+      order_id: orderId,
+    });
+    
   } catch (err: any) {
-    console.error('Razorpay Order Creation Error:', err);
+    console.error('Cashfree Order Creation Error:', err.response?.data || err.message);
     return NextResponse.json(
-      { error: err.message || 'Internal Server Error' },
+      { error: err.response?.data?.message || err.message || 'Internal Server Error' },
       { status: 500 }
     );
   }
