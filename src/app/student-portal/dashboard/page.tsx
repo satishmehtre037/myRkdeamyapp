@@ -80,6 +80,11 @@ function StudentDashboard() {
 
   const handlePay = async (installment: Installment) => {
     if (!student) return;
+
+    if (student.pending_amount <= 0) {
+      alert('You have no pending balance to pay!');
+      return;
+    }
     
     // Check if script is loaded
     if (!(window as any).Razorpay) {
@@ -328,14 +333,18 @@ function StudentDashboard() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                           <span style={{ fontSize: '15px', fontWeight: 600, color: '#e2e8f0' }}>{formatCurrency(inst.amount)}</span>
                           <motion.button 
-                            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                            onClick={() => handlePay(inst)} 
+                            whileHover={student.pending_amount > 0 ? { scale: 1.05 } : {}} whileTap={student.pending_amount > 0 ? { scale: 0.95 } : {}}
+                            onClick={() => student.pending_amount > 0 && handlePay(inst)} 
+                            disabled={student.pending_amount <= 0}
                             style={{ 
-                              background: 'transparent', border: '1px solid #38bdf8', color: '#38bdf8', 
-                              padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' 
+                              background: student.pending_amount > 0 ? 'transparent' : 'rgba(148, 163, 184, 0.1)', 
+                              border: student.pending_amount > 0 ? '1px solid #38bdf8' : '1px solid rgba(148, 163, 184, 0.2)', 
+                              color: student.pending_amount > 0 ? '#38bdf8' : '#64748b', 
+                              padding: '6px 12px', borderRadius: '6px', fontSize: '12px', 
+                              cursor: student.pending_amount > 0 ? 'pointer' : 'not-allowed'
                             }}
                           >
-                            Pay Early
+                            {student.pending_amount <= 0 ? 'Paid' : 'Pay Early'}
                           </motion.button>
                         </div>
                       </div>

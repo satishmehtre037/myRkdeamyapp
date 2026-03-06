@@ -34,13 +34,13 @@ export async function POST(req: Request) {
     }
 
     // 1. Fetch exact amount and details from DB to prevent tampering
-    const { data: installment, error } = await supabase
+    const { data: installment, error: instError } = await supabase
       .from('installments')
       .select('amount, status, students(id, name, email, phone)')
       .eq('id', installmentId)
       .single();
 
-    if (error || !installment) {
+    if (instError || !installment) {
       return NextResponse.json({ error: 'Installment not found' }, { status: 404 });
     }
 
@@ -48,9 +48,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Installment is already paid' }, { status: 400 });
     }
 
-    // 2. Create Razorpay Order
+    // 2. Fetch student's remaining balance to prevent overpayment
+    const { data: feeAssignment, error: feeError } = await supabase
+      .from('fee_assignments')
+      .select('pending_amount')
+      .eq('student_id', studentId)
+      .single();
+
+    if (feeError || !feeAssignment) {
+      return NextResponse.json({ error: 'Fee assignment not found' }, { status: 404 });
+    }
+
+    const pendingAmount = Number(feeAssignment.pending_amount);
+    if (pendingAmount <= 0) {
+      return NextResponse.json({ error: 'Student has no pending balance' }, { status: 400 });
+    }
+
+    // Use the smaller of the installment amount or the actual pending balance
+    const payableAmount = Math.min(Number(installment.amount), pendingAmount);
+
+    // 3. Create Razorpay Order
     // Razorpay amount is in paise (1 INR = 100 paise)
-    const amountInPaise = Math.round(Number(installment.amount) * 100);
+    const amountInPaise = Math.round(payableAmount * 100);
 
     const options = {
       amount: amountInPaise,
