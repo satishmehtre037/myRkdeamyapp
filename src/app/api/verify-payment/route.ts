@@ -15,7 +15,7 @@ export async function POST(req: Request) {
       installmentId
     } = body;
 
-    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature || !studentId || !installmentId) {
+    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature || !studentId) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
     }
 
