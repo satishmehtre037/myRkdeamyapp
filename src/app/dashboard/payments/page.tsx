@@ -24,6 +24,9 @@ export default function PaymentsPage() {
   const [showModal, setShowModal] = useState(false);
   const [receiptPayment, setReceiptPayment] = useState<Payment | null>(null);
   const [saving, setSaving] = useState(false);
+  const [studentSearch, setStudentSearch] = useState('');
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [showStudentResults, setShowStudentResults] = useState(false);
 
   const loadData = async () => {
     try {
@@ -66,6 +69,8 @@ export default function PaymentsPage() {
         notes: form.get('notes') as string,
       });
       setShowModal(false);
+      setSelectedStudent(null);
+      setStudentSearch('');
       await loadData();
     } catch (err) { console.error(err); alert('Failed to record payment'); } finally { setSaving(false); }
   };
@@ -187,14 +192,94 @@ export default function PaymentsPage() {
 
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Record New Payment">
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div>
+          <div style={{ position: 'relative' }}>
             <label style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '6px' }}>Student</label>
-            <select name="student_id" required
-              style={{ width: '100%', padding: '10px 14px', background: 'rgba(30, 41, 59, 0.5)', border: '1px solid rgba(99, 102, 241, 0.08)', borderRadius: '10px', fontSize: '13px', color: '#e2e8f0', cursor: 'pointer', fontFamily: 'inherit', outline: 'none' }}
-            >
-              <option value="" style={{ background: '#1e293b' }}>Select Student</option>
-              {students.map(s => <option key={s.id} value={s.id} style={{ background: '#1e293b' }}>{s.name}</option>)}
-            </select>
+            <div style={{ position: 'relative' }}>
+              <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }}>
+                <Search size={16} />
+              </div>
+              <input 
+                type="text" 
+                placeholder="Search name or student ID..." 
+                value={selectedStudent ? selectedStudent.name : studentSearch}
+                onChange={(e) => {
+                  setStudentSearch(e.target.value);
+                  setSelectedStudent(null);
+                  setShowStudentResults(true);
+                }}
+                onFocus={() => setShowStudentResults(true)}
+                autoComplete="off"
+                style={{ 
+                  width: '100%', 
+                  padding: '10px 14px 10px 38px', 
+                  background: 'rgba(30, 41, 59, 0.5)', 
+                  border: '1px solid rgba(99, 102, 241, 0.08)', 
+                  borderRadius: '10px', 
+                  fontSize: '13px', 
+                  color: '#e2e8f0', 
+                  outline: 'none', 
+                  fontFamily: 'inherit' 
+                }} 
+              />
+              <input type="hidden" name="student_id" value={selectedStudent?.id || ''} required />
+            </div>
+
+            <AnimatePresence>
+              {showStudentResults && studentSearch && !selectedStudent && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    zIndex: 100,
+                    background: '#1e293b',
+                    border: '1px solid rgba(99, 102, 241, 0.15)',
+                    borderRadius: '12px',
+                    marginTop: '4px',
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+                    maxHeight: '200px',
+                    overflowY: 'auto'
+                  }}
+                >
+                  {students
+                    .filter(s => 
+                      s.name.toLowerCase().includes(studentSearch.toLowerCase()) || 
+                      s.id.toLowerCase().includes(studentSearch.toLowerCase())
+                    )
+                    .map(s => (
+                      <div
+                        key={s.id}
+                        onClick={() => {
+                          setSelectedStudent(s);
+                          setShowStudentResults(false);
+                          setStudentSearch('');
+                        }}
+                        style={{
+                          padding: '10px 14px',
+                          cursor: 'pointer',
+                          borderBottom: '1px solid rgba(255,255,255,0.05)',
+                          transition: 'background 0.2s'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                      >
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0' }}>{s.name}</div>
+                        <div style={{ fontSize: '10px', color: '#64748b' }}>ID: {s.id.slice(0, 8)}... • {s.batch_name}</div>
+                      </div>
+                    ))}
+                  {students.filter(s => 
+                      s.name.toLowerCase().includes(studentSearch.toLowerCase()) || 
+                      s.id.toLowerCase().includes(studentSearch.toLowerCase())
+                  ).length === 0 && (
+                    <div style={{ padding: '14px', textAlign: 'center', color: '#64748b', fontSize: '12px' }}>No students found</div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
           <div>
             <label style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '6px' }}>Amount (₹)</label>
