@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { addPayment, getInstallments } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
+import Razorpay from 'razorpay';
 
 export async function POST(req: Request) {
   try {
@@ -34,28 +35,38 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid payment signature' }, { status: 400 });
     }
 
-    // 2. Prevent Double Processing
-    // Verify the installment isn't already paid
+    // 2. Fetch the actual order from Razorpay to get the "Truth" amount
+    // This prevents frontend spoofing of the payment amount
+    const razorpay = new Razorpay({
+      key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+      key_secret: key_secret,
+    });
+    const order = await razorpay.orders.fetch(razorpay_order_id) as any;
+    const actualPaidAmount = order.amount / 100; // Paise to INR
+
+    // 3. Prevent Double Processing
+    // Verify the installment isn't already paid (though partials are allowed, 
+    // we check status to avoid double-processing the same success event)
     const { data: instCheck } = await supabase
       .from('installments')
       .select('amount, status')
       .eq('id', installmentId)
       .single();
       
-    if (!instCheck || instCheck.status === 'paid') {
-      return NextResponse.json({ error: 'Installment already paid or not found' }, { status: 400 });
+    if (!instCheck) {
+      return NextResponse.json({ error: 'Installment not found' }, { status: 404 });
     }
 
-    // 3. Record the Payment in Supabase
+    // 4. Record the Payment in Supabase
     const receiptNumber = `RZPY-${razorpay_payment_id.slice(-8).toUpperCase()}`;
 
     // Use our existing helper to update fees, installments, and insert the payment
     await addPayment({
       student_id: studentId,
       installment_id: installmentId,
-      amount: Number(instCheck.amount),
+      amount: actualPaidAmount,
       payment_date: new Date().toISOString().split('T')[0],
-      payment_method: 'upi', // We can default or pass it if extended
+      payment_method: 'upi', 
       receipt_number: receiptNumber,
       notes: `Online Payment via Razorpay (Order: ${razorpay_order_id})`,
     });

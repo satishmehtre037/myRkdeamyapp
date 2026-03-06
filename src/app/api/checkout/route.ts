@@ -20,7 +20,7 @@ const getRazorpayInstance = () => {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { installmentId, studentId } = body;
+    const { installmentId, studentId, amount } = body;
 
     if (!installmentId || !studentId) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
@@ -64,8 +64,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Student has no pending balance' }, { status: 400 });
     }
 
-    // Use the smaller of the installment amount or the actual pending balance
-    const payableAmount = Math.min(Number(installment.amount), pendingAmount);
+    // Determine the final amount to charge
+    // If a custom amount is passed, use it; otherwise use the installment amount.
+    // In both cases, we MUST cap it by the total actual pending amount to avoid overpayment.
+    const requestedAmount = amount ? Number(amount) : Number(installment.amount);
+    
+    if (requestedAmount <= 0) {
+      return NextResponse.json({ error: 'Payment amount must be greater than zero' }, { status: 400 });
+    }
+
+    const payableAmount = Math.min(requestedAmount, pendingAmount);
 
     // 3. Create Razorpay Order
     // Razorpay amount is in paise (1 INR = 100 paise)

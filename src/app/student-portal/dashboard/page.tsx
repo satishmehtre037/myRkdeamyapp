@@ -29,6 +29,7 @@ function StudentDashboard() {
   const [installments, setInstallments] = useState<Installment[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [customAmounts, setCustomAmounts] = useState<Record<string, string>>({});
 
   // Handle Return Messages strictly via URL redirects/errors if needed
   useEffect(() => {
@@ -78,7 +79,7 @@ function StudentDashboard() {
     router.push('/student-portal');
   };
 
-  const handlePay = async (installment: Installment) => {
+  const handlePay = async (installment: Installment, amountOverride?: number) => {
     if (!student) return;
 
     if (student.pending_amount <= 0) {
@@ -100,6 +101,7 @@ function StudentDashboard() {
         body: JSON.stringify({
           installmentId: installment.id,
           studentId: student.id,
+          amount: amountOverride
         })
       });
       
@@ -291,19 +293,45 @@ function StudentDashboard() {
                         </div>
                       </div>
                       
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <span style={{ fontSize: '20px', fontWeight: 800, color: '#f8fafc' }}>{formatCurrency(inst.amount)}</span>
-                        <motion.button 
-                          whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                          onClick={() => handlePay(inst)}
-                          style={{ 
-                            background: 'linear-gradient(135deg, #38bdf8, #2563eb)', border: 'none', 
-                            padding: '10px 20px', borderRadius: '10px', color: 'white', 
-                            fontSize: '14px', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 15px rgba(56, 189, 248, 0.3)' 
-                          }}
-                        >
-                          Pay Now
-                        </motion.button>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '240px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ position: 'relative', flex: 1 }}>
+                            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '14px' }}>₹</span>
+                            <input 
+                              type="number"
+                              placeholder="Custom amount"
+                              value={customAmounts[inst.id] || ''}
+                              onChange={(e) => setCustomAmounts({ ...customAmounts, [inst.id]: e.target.value })}
+                              style={{
+                                width: '100%',
+                                background: 'rgba(15, 23, 42, 0.4)',
+                                border: '1px solid rgba(148, 163, 184, 0.1)',
+                                borderRadius: '10px',
+                                padding: '10px 12px 10px 24px',
+                                color: '#f8fafc',
+                                fontSize: '13px',
+                                outline: 'none'
+                              }}
+                            />
+                          </div>
+                          <motion.button 
+                            whileHover={student.pending_amount > 0 ? { scale: 1.05 } : {}} whileTap={student.pending_amount > 0 ? { scale: 0.95 } : {}}
+                            onClick={() => student.pending_amount > 0 && handlePay(inst, customAmounts[inst.id] ? Number(customAmounts[inst.id]) : undefined)}
+                            disabled={student.pending_amount <= 0}
+                            style={{ 
+                              background: student.pending_amount > 0 ? 'linear-gradient(135deg, #38bdf8, #2563eb)' : 'rgba(148, 163, 184, 0.1)', 
+                              border: 'none', 
+                              padding: '10px 20px', borderRadius: '10px', color: student.pending_amount > 0 ? 'white' : '#64748b', 
+                              fontSize: '14px', fontWeight: 600, cursor: student.pending_amount > 0 ? 'pointer' : 'not-allowed', 
+                              boxShadow: student.pending_amount > 0 ? '0 4px 15px rgba(56, 189, 248, 0.3)' : 'none' 
+                            }}
+                          >
+                            {student.pending_amount <= 0 ? 'Paid' : customAmounts[inst.id] ? `Pay Custom` : 'Pay Full'}
+                          </motion.button>
+                        </div>
+                        <p style={{ fontSize: '11px', color: '#64748b', margin: 0, textAlign: 'right' }}>
+                          Full: {formatCurrency(inst.amount)}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -330,11 +358,29 @@ function StudentDashboard() {
                           <span style={{ fontSize: '14px', fontWeight: 500, color: '#cbd5e1' }}>Installment #{inst.installment_number}</span>
                           <span style={{ fontSize: '13px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={12} /> {formatDate(inst.due_date)}</span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                          <span style={{ fontSize: '15px', fontWeight: 600, color: '#e2e8f0' }}>{formatCurrency(inst.amount)}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{ position: 'relative', width: '140px' }}>
+                            <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '12px' }}>₹</span>
+                            <input 
+                              type="number"
+                              placeholder="Partial"
+                              value={customAmounts[inst.id] || ''}
+                              onChange={(e) => setCustomAmounts({ ...customAmounts, [inst.id]: e.target.value })}
+                              style={{
+                                width: '100%',
+                                background: 'rgba(15, 23, 42, 0.4)',
+                                border: '1px solid rgba(148, 163, 184, 0.1)',
+                                borderRadius: '8px',
+                                padding: '6px 10px 6px 20px',
+                                color: '#f8fafc',
+                                fontSize: '12px',
+                                outline: 'none'
+                              }}
+                            />
+                          </div>
                           <motion.button 
                             whileHover={student.pending_amount > 0 ? { scale: 1.05 } : {}} whileTap={student.pending_amount > 0 ? { scale: 0.95 } : {}}
-                            onClick={() => student.pending_amount > 0 && handlePay(inst)} 
+                            onClick={() => student.pending_amount > 0 && handlePay(inst, customAmounts[inst.id] ? Number(customAmounts[inst.id]) : undefined)} 
                             disabled={student.pending_amount <= 0}
                             style={{ 
                               background: student.pending_amount > 0 ? 'transparent' : 'rgba(148, 163, 184, 0.1)', 
@@ -344,7 +390,7 @@ function StudentDashboard() {
                               cursor: student.pending_amount > 0 ? 'pointer' : 'not-allowed'
                             }}
                           >
-                            {student.pending_amount <= 0 ? 'Paid' : 'Pay Early'}
+                            {student.pending_amount <= 0 ? 'Settled' : customAmounts[inst.id] ? 'Pay Custom' : 'Pay Early'}
                           </motion.button>
                         </div>
                       </div>
