@@ -9,7 +9,7 @@ import type { Student, Installment, Payment } from '@/lib/mock-data';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import StatusBadge from '@/components/ui/StatusBadge';
 import { useSearchParams } from 'next/navigation';
-import { load } from '@cashfreepayments/cashfree-js';
+import Script from 'next/script';
 
 const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
 const itemVariants = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4 } } };
@@ -21,22 +21,6 @@ export default function StudentDashboard() {
   const [installments, setInstallments] = useState<Installment[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [cashfree, setCashfree] = useState<any>(null);
-
-  // Initialize Cashfree SDK
-  useEffect(() => {
-    async function initCashfree() {
-      try {
-        const cf = await load({
-          mode: process.env.NEXT_PUBLIC_CASHFREE_ENVIRONMENT === 'PRODUCTION' ? 'production' : 'sandbox',
-        });
-        setCashfree(cf);
-      } catch (err) {
-        console.error('Failed to load Cashfree SDK', err);
-      }
-    }
-    initCashfree();
-  }, []);
 
   // Handle Return Messages strictly via URL redirects/errors if needed
   useEffect(() => {
@@ -62,44 +46,6 @@ export default function StudentDashboard() {
           getStudentPayments(studentId!)
         ]);
         
-        // Also check if we just returned from a Cashfree checkout redirect
-        const returnOrderId = searchParams.get('order_id');
-        if (returnOrderId) {
-          try {
-            // Find which installment this order belonged to (it's embedded in the order_id: order_{inst_id}_{timestamp})
-            const orderParts = returnOrderId.split('_');
-            const partialInstId = orderParts[1];
-            // Simple match to find full installment ID
-            const matchedInst = iData.find((i: Installment) => i.id.startsWith(partialInstId));
-
-            if (matchedInst) {
-              const verifyRes = await fetch('/api/verify-payment', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  order_id: returnOrderId,
-                  studentId: studentId,
-                  installmentId: matchedInst.id,
-                })
-              });
-              
-              const verifyData = await verifyRes.json();
-              if (verifyData.success) {
-                alert(`Payment successful! Receipt: ${verifyData.receipt}`);
-                // Re-fetch to get fresh data immediately
-                window.location.replace('/student-portal/dashboard');
-                return;
-              } else {
-                alert(verifyData.error || 'Payment verification failed, or it was already processed.');
-                window.location.replace('/student-portal/dashboard');
-                return;
-              }
-            }
-          } catch(e) {
-            console.error(e);
-          }
-        }
-
         if (!sData) {
           localStorage.removeItem('student_id');
           router.push('/student-portal');
@@ -127,8 +73,9 @@ export default function StudentDashboard() {
   const handlePay = async (installment: Installment) => {
     if (!student) return;
     
-    if (!cashfree) {
-      alert('Payment gateway is still initializing. Please try again in a moment.');
+    // Check if script is loaded
+    if (!(window as any).Razorpay) {
+      alert('Payment gateway is still loading. Please try again in a moment.');
       return;
     }
 
@@ -145,31 +92,65 @@ export default function StudentDashboard() {
       
       const orderConfig = await res.json();
       
-      if (orderConfig.error || !orderConfig.payment_session_id) {
+      if (orderConfig.error) {
         alert(orderConfig.error || 'Failed to initialize payment gateway.');
         return;
       }
 
-      // 2. Open Cashfree Checkout Modal
-      const checkoutOptions = {
-        paymentSessionId: orderConfig.payment_session_id,
-        redirectTarget: '_modal', // Open within the same page
+      // 2. Open Razorpay Checktout Modal
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: orderConfig.amount,
+        currency: orderConfig.currency,
+        name: 'RKDeamy Classes',
+        description: `Installment #${installment.installment_number}`,
+        image: 'https://i.imgur.com/3g7nmJC.png', // Or use your own logo URL
+        order_id: orderConfig.id,
+        prefill: {
+          name: orderConfig.studentName || '',
+          email: orderConfig.studentEmail || '',
+          contact: orderConfig.studentPhone || '',
+        },
+        theme: {
+          color: '#38bdf8',
+        },
+        handler: async function (response: any) {
+          try {
+            // 3. Verify Payment Signature Backend Route
+            const verifyRes = await fetch('/api/verify-payment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                studentId: student.id,
+                installmentId: installment.id,
+              })
+            });
+
+            const verifyData = await verifyRes.json();
+            
+            if (verifyData.success) {
+              alert(`Payment successful! Receipt: ${verifyData.receipt}`);
+              window.location.reload(); // Reload dashboard to fetch fresh data
+            } else {
+              alert(verifyData.error || 'Payment verification failed.');
+            }
+          } catch (err) {
+            console.error('Verification Error:', err);
+            alert('An error occurred while verifying the payment.');
+          }
+        },
       };
 
-      cashfree.checkout(checkoutOptions).then((result: any) => {
-         // This block handles what happens when modal is closed
-         if(result.error){
-            console.error(result.error);
-            alert(`Payment Failed: ${result.error.message || 'Unknown Error'}`);
-         }
-         if(result.redirect){
-            // If redirecting to the returnUrl, our useEffect on mount will catch it (see above)
-            console.log("Redirecting for verification...");
-         }
-         if(result.paymentDetails){
-            console.log("Payment Details inside modal popup", result.paymentDetails);
-         }
+      const rzp = new (window as any).Razorpay(options);
+      
+      rzp.on('payment.failed', function (response: any){
+        alert(`Payment Failed: ${response.error.description}`);
       });
+
+      rzp.open();
 
     } catch (err) {
       console.error(err);
@@ -193,6 +174,7 @@ export default function StudentDashboard() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', flexDirection: 'column' }}>
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       {/* Dynamic Top Bar */}
       <header style={{ 
         background: 'rgba(15, 23, 42, 0.8)', 
