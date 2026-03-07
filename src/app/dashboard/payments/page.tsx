@@ -115,16 +115,17 @@ export default function PaymentsPage() {
       <motion.div variants={itemVariants} style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(30, 41, 59, 0.5)', borderRadius: '10px', padding: '10px 14px', border: '1px solid rgba(99, 102, 241, 0.08)', flex: 1, maxWidth: '300px' }}>
           <Search size={16} style={{ color: '#64748b' }} />
-          <input type="text" placeholder="Search payments..." value={search} onChange={e => setSearch(e.target.value)}
+          <input type="text" aria-label="Search payments" placeholder="Search payments..." value={search} onChange={e => setSearch(e.target.value)}
             style={{ background: 'none', border: 'none', outline: 'none', fontSize: '13px', color: '#e2e8f0', width: '100%', fontFamily: 'inherit' }} />
         </div>
-        <select value={filterMethod} onChange={e => setFilterMethod(e.target.value)}
+        <select aria-label="Filter payment method" value={filterMethod} onChange={e => setFilterMethod(e.target.value)}
           style={{ background: 'rgba(30, 41, 59, 0.5)', border: '1px solid rgba(99, 102, 241, 0.08)', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#e2e8f0', cursor: 'pointer', fontFamily: 'inherit', outline: 'none' }}
         >
           <option value="all" style={{ background: '#1e293b' }}>All Methods</option>
           <option value="cash" style={{ background: '#1e293b' }}>Cash</option>
           <option value="upi" style={{ background: '#1e293b' }}>UPI</option>
           <option value="bank_transfer" style={{ background: '#1e293b' }}>Bank Transfer</option>
+          <option value="cheque" style={{ background: '#1e293b' }}>Cheque</option>
           <option value="card" style={{ background: '#1e293b' }}>Card</option>
         </select>
       </motion.div>
@@ -193,12 +194,13 @@ export default function PaymentsPage() {
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Record New Payment">
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ position: 'relative' }}>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '6px' }}>Student</label>
+            <label htmlFor="studentSearch" style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '6px' }}>Student</label>
             <div style={{ position: 'relative' }}>
               <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }}>
                 <Search size={16} />
               </div>
               <input 
+                id="studentSearch"
                 type="text" 
                 placeholder="Search name or student ID..." 
                 value={selectedStudent ? selectedStudent.name : studentSearch}
@@ -282,29 +284,30 @@ export default function PaymentsPage() {
             </AnimatePresence>
           </div>
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '6px' }}>Amount (₹)</label>
-            <input name="amount" type="number" required
+            <label htmlFor="amount" style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '6px' }}>Amount (₹)</label>
+            <input id="amount" name="amount" type="number" required placeholder="0.00"
               style={{ width: '100%', padding: '10px 14px', background: 'rgba(30, 41, 59, 0.5)', border: '1px solid rgba(99, 102, 241, 0.08)', borderRadius: '10px', fontSize: '13px', color: '#e2e8f0', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} />
           </div>
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '6px' }}>Payment Date</label>
-            <input name="payment_date" type="date" required defaultValue={new Date().toISOString().split('T')[0]}
+            <label htmlFor="payment_date" style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '6px' }}>Payment Date</label>
+            <input id="payment_date" name="payment_date" type="date" required defaultValue={new Date().toISOString().split('T')[0]}
               style={{ width: '100%', padding: '10px 14px', background: 'rgba(30, 41, 59, 0.5)', border: '1px solid rgba(99, 102, 241, 0.08)', borderRadius: '10px', fontSize: '13px', color: '#e2e8f0', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} />
           </div>
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '6px' }}>Payment Method</label>
-            <select name="payment_method" required
+            <label htmlFor="payment_method" style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '6px' }}>Payment Method</label>
+            <select id="payment_method" name="payment_method" required
               style={{ width: '100%', padding: '10px 14px', background: 'rgba(30, 41, 59, 0.5)', border: '1px solid rgba(99, 102, 241, 0.08)', borderRadius: '10px', fontSize: '13px', color: '#e2e8f0', cursor: 'pointer', fontFamily: 'inherit', outline: 'none' }}
             >
               <option value="cash" style={{ background: '#1e293b' }}>Cash</option>
               <option value="upi" style={{ background: '#1e293b' }}>UPI</option>
               <option value="bank_transfer" style={{ background: '#1e293b' }}>Bank Transfer</option>
+              <option value="cheque" style={{ background: '#1e293b' }}>Cheque</option>
               <option value="card" style={{ background: '#1e293b' }}>Card</option>
             </select>
           </div>
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '6px' }}>Notes (optional)</label>
-            <input name="notes" type="text"
+            <label htmlFor="notes" style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '6px' }}>Notes (optional)</label>
+            <input id="notes" name="notes" type="text" placeholder="Add any notes..."
               style={{ width: '100%', padding: '10px 14px', background: 'rgba(30, 41, 59, 0.5)', border: '1px solid rgba(99, 102, 241, 0.08)', borderRadius: '10px', fontSize: '13px', color: '#e2e8f0', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} />
           </div>
           <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="submit" disabled={saving}
@@ -317,9 +320,43 @@ export default function PaymentsPage() {
 
       {receiptPayment && (() => {
         const student = students.find(s => s.id === receiptPayment.student_id);
+        const studentPayments = payments.filter(p => p.student_id === receiptPayment.student_id).sort((a,b) => new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime());
+        const totalPaid = student?.paid_amount || receiptPayment.amount;
+        const totalFee = student?.total_fee || receiptPayment.amount;
+        const pendingAmount = student?.pending_amount || 0;
+
+        const paymentHistory = studentPayments.map(p => ({
+          dueDate: p.payment_date,
+          paymentDate: p.payment_date,
+          amount: p.amount,
+          paymentMethod: p.payment_method,
+          receiptNumber: p.receipt_number,
+          status: p.status
+        }));
+
         return (
           <FeeReceipt isOpen={true} onClose={() => setReceiptPayment(null)}
-            data={{ receiptNumber: receiptPayment.receipt_number, studentName: receiptPayment.student_name, studentEmail: student?.email || '', studentPhone: student?.phone || '', batchName: receiptPayment.batch_name, amount: receiptPayment.amount, paymentDate: receiptPayment.payment_date, paymentMethod: receiptPayment.payment_method, installmentNumber: receiptPayment.installment_number }}
+            data={{ 
+              receiptNumber: receiptPayment.receipt_number, 
+              studentName: receiptPayment.student_name, 
+              studentEmail: student?.email || 'admin@rkdeamy.com', 
+              studentPhone: student?.phone || '-', 
+              batchName: receiptPayment.batch_name, 
+              amount: receiptPayment.amount, 
+              paymentDate: receiptPayment.payment_date, 
+              paymentMethod: receiptPayment.payment_method, 
+              installmentNumber: receiptPayment.installment_number,
+              address: 'Sec-3, Koparkhairane, Navi Mumbai',
+              attendanceId: `ATT-${student?.id.split('-')[1] || '101'}`,
+              enrollmentDate: student?.joined_at,
+              academicSession: '2025-2026',
+              totalPayable: totalFee,
+              totalPaid: totalPaid,
+              pendingAmount: pendingAmount,
+              baseAmount: totalFee,
+              totalAmount: totalFee,
+              paymentHistory
+            }}
           />
         );
       })()}

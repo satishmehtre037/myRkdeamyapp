@@ -269,45 +269,55 @@ export async function addPayment(payment: {
   payment_date: string;
   payment_method: string;
   receipt_number: string;
+  status?: 'completed' | 'pending' | 'failed';
   notes?: string;
 }) {
+  // Determine initial status based on method if not provided
+  const initialStatus = payment.status || 
+    (['bank_transfer', 'cheque'].includes(payment.payment_method.toLowerCase()) ? 'pending' : 'completed');
+
   const { data, error } = await supabase
     .from('payments')
-    .insert(payment)
+    .insert({
+      ...payment,
+      status: initialStatus
+    })
     .select()
     .single();
 
   if (error) throw error;
 
-  // If linked to an installment, mark it as paid
-  if (payment.installment_id) {
+  // If linked to an installment and completed, mark it as paid
+  if (payment.installment_id && initialStatus === 'completed') {
     await supabase
       .from('installments')
       .update({ status: 'paid', paid_date: payment.payment_date })
       .eq('id', payment.installment_id);
   }
 
-  // Update fee_assignment paid_amount
-  const { data: feeData } = await supabase
-    .from('fee_assignments')
-    .select('id, paid_amount, total_fee')
-    .eq('student_id', payment.student_id)
-    .single();
-
-  if (feeData) {
-    const totalFee = Number(feeData.total_fee);
-    const currentPaid = Number(feeData.paid_amount);
-
-    // Ensure we don't exceed total fee (cap at total_fee)
-    const newPaid = Math.min(currentPaid + payment.amount, totalFee);
-
-    await supabase
+  // Update fee_assignment paid_amount ONLY if completed
+  if (initialStatus === 'completed') {
+    const { data: feeData } = await supabase
       .from('fee_assignments')
-      .update({
-        paid_amount: newPaid,
-        status: newPaid >= totalFee ? 'paid' : newPaid > 0 ? 'partial' : 'due',
-      })
-      .eq('id', feeData.id);
+      .select('id, paid_amount, total_fee')
+      .eq('student_id', payment.student_id)
+      .single();
+
+    if (feeData) {
+      const totalFee = Number(feeData.total_fee);
+      const currentPaid = Number(feeData.paid_amount);
+
+      // Ensure we don't exceed total fee (cap at total_fee)
+      const newPaid = Math.min(currentPaid + payment.amount, totalFee);
+
+      await supabase
+        .from('fee_assignments')
+        .update({
+          paid_amount: newPaid,
+          status: newPaid >= totalFee ? 'paid' : newPaid > 0 ? 'partial' : 'due',
+        })
+        .eq('id', feeData.id);
+    }
   }
 
   return data;

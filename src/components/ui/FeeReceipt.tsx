@@ -2,8 +2,17 @@
 
 import React, { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Download, Printer } from 'lucide-react';
+import { X, Printer } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
+
+interface PaymentHistoryItem {
+  dueDate: string;
+  paymentDate: string;
+  amount: number;
+  paymentMethod: string;
+  receiptNumber: string;
+  status?: string;
+}
 
 interface ReceiptData {
   receiptNumber: string;
@@ -15,6 +24,22 @@ interface ReceiptData {
   paymentDate: string;
   paymentMethod: string;
   installmentNumber: number;
+
+  branch?: string;
+  address?: string;
+  attendanceId?: string;
+  enrollmentDate?: string;
+  academicSession?: string;
+
+  baseAmount?: number;
+  taxAmount?: number;
+  totalAmount?: number;
+
+  totalPayable?: number;
+  totalPaid?: number;
+  pendingAmount?: number;
+
+  paymentHistory?: PaymentHistoryItem[];
 }
 
 interface FeeReceiptProps {
@@ -37,7 +62,7 @@ export default function FeeReceipt({ isOpen, onClose, data }: FeeReceiptProps) {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Fee Receipt - ${data.receiptNumber}</title>
+        <title>${data.studentName} - ${data.receiptNumber || data.batchName}</title>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
           * { 
@@ -47,18 +72,28 @@ export default function FeeReceipt({ isOpen, onClose, data }: FeeReceiptProps) {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
+          @page {
+            size: A4 portrait;
+            margin: 10mm;
+          }
+          html, body {
+            height: 100%;
+            overflow: hidden; /* Force single page */
+          }
           body {
             font-family: 'Inter', sans-serif;
             background: #fff;
             color: #1a1a2e;
-            padding: 40px;
+            padding: 0;
           }
           .receipt {
-            max-width: 600px;
+            width: 100%;
+            max-width: 800px;
+            max-height: 100%;
             margin: 0 auto;
             border: 2px solid #e5e7eb;
             border-radius: 12px;
-            padding: 40px;
+            padding: 30px;
           }
           .receipt-header {
             text-align: center;
@@ -182,45 +217,92 @@ export default function FeeReceipt({ isOpen, onClose, data }: FeeReceiptProps) {
           </div>
 
           <div class="info-grid">
-            <div class="info-item">
-              <label>Student Name</label>
-              <span>${data.studentName}</span>
-            </div>
-            <div class="info-item">
-              <label>Batch</label>
-              <span>${data.batchName}</span>
-            </div>
-            <div class="info-item">
-              <label>Payment Date</label>
-              <span>${formatDate(data.paymentDate)}</span>
-            </div>
-            <div class="info-item">
-              <label>Payment Method</label>
-              <span style="text-transform: capitalize">${data.paymentMethod.replace('_', ' ')}</span>
-            </div>
-            <div class="info-item">
-              <label>Email</label>
-              <span>${data.studentEmail}</span>
-            </div>
-            <div class="info-item">
-              <label>Installment</label>
-              <span>#${data.installmentNumber}</span>
-            </div>
+            <div class="info-item"><label>Reference No</label><span>${data.receiptNumber}</span></div>
+            <div class="info-item"><label>Date</label><span>${formatDate(data.paymentDate)}</span></div>
+            <div class="info-item"><label>Name</label><span>${data.studentName}</span></div>
+            <div class="info-item"><label>Course</label><span>${data.batchName}</span></div>
+            <div class="info-item"><label>Branch</label><span>${data.branch || 'Thane'}</span></div>
+            <div class="info-item"><label>Email Id</label><span>${data.studentEmail}</span></div>
+            <div class="info-item"><label>Contact No.</label><span>${data.studentPhone}</span></div>
+            <div class="info-item"><label>Payment Method</label><span style="text-transform: capitalize;">${data.paymentMethod.replace('_', ' ')}</span></div>
+            <div class="info-item"><label>Enrollment Date</label><span>${data.enrollmentDate ? formatDate(data.enrollmentDate) : '-'}</span></div>
+            <div class="info-item" style="grid-column: span 2;"><label>Permanent Address</label><span>${data.address || '-'}</span></div>
+            <div class="info-item"><label>Attendance ID</label><span>${data.attendanceId || '-'}</span></div>
+            <div class="info-item"><label>Academic Session</label><span>${data.academicSession || '2025-2026'}</span></div>
           </div>
 
-          <div class="amount-box">
-            <label>Amount Paid</label>
-            <div class="amount">${formatCurrency(data.amount)}</div>
+          <div style="margin-bottom: 24px;">
+            <h3 style="font-size: 14px; margin-bottom: 8px;">Proposed Fee Details</h3>
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+              <thead>
+                <tr style="border-top: 2px solid #000; border-bottom: 1px solid #000;">
+                  <th style="padding: 6px;">Srno</th>
+                  <th style="padding: 6px;">Particulars</th>
+                  <th style="padding: 6px; text-align: right;">Base Amount</th>
+                  <th style="padding: 6px; text-align: right;">Tax</th>
+                  <th style="padding: 6px; text-align: right;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="border-bottom: 2px solid #000;">
+                  <td style="padding: 6px;">1</td>
+                  <td style="padding: 6px;">${data.batchName}</td>
+                  <td style="padding: 6px; text-align: right;">${formatCurrency(data.baseAmount || data.amount)}</td>
+                  <td style="padding: 6px; text-align: right;">${formatCurrency(data.taxAmount || 0)}</td>
+                  <td style="padding: 6px; text-align: right;">${formatCurrency(data.totalAmount || data.amount)}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
-          <div class="receipt-footer">
-            <div class="status">✓ Payment Confirmed</div>
-            <p>This is a computer-generated receipt. No signature required.</p>
-            <p style="margin-top: 4px;">RKDeamy Classes • admin@rkdeamy.com</p>
+          <div style="margin-bottom: 24px;">
+            <h3 style="font-size: 14px; margin-bottom: 8px;">Payment Details</h3>
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; border-top: 2px solid #000; border-bottom: 2px solid #000;">
+              <thead>
+                <tr style="border-bottom: 1px solid #000;">
+                  <th style="padding: 6px;">Due Date</th>
+                  <th style="padding: 6px;">Payment Date</th>
+                  <th style="padding: 6px; text-align: right;">Amount</th>
+                  <th style="padding: 6px;">Cheque/DD No.</th>
+                  <th style="padding: 6px;">Receipt No</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${(data.paymentHistory || [{ dueDate: data.paymentDate, paymentDate: data.paymentDate, amount: data.amount, paymentMethod: data.paymentMethod, receiptNumber: data.receiptNumber, status: 'completed' }]).map(p => `
+                  <tr>
+                    <td style="padding: 6px; border-bottom: 1px solid #e5e7eb;">${formatDate(p.dueDate || p.paymentDate)}</td>
+                    <td style="padding: 6px; border-bottom: 1px solid #e5e7eb;">${p.paymentDate ? formatDate(p.paymentDate) : ''}</td>
+                    <td style="padding: 6px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatCurrency(p.amount)}</td>
+                    <td style="padding: 6px; border-bottom: 1px solid #e5e7eb;">${p.paymentMethod !== 'cash' && p.paymentMethod !== 'upi' ? p.paymentMethod : ''}</td>
+                    <td style="padding: 6px; border-bottom: 1px solid #e5e7eb;">${p.receiptNumber || ''}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
           </div>
 
-          <div class="signature-line">
-            Authorized Signatory
+          <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 30px; padding-bottom: 10px; border-bottom: 1px solid #000;">
+            <div style="text-align: center;"><strong>Total Payable Fees :</strong><br/>${formatCurrency(data.totalPayable || data.amount)}</div>
+            <div style="text-align: center;"><strong>Total Paid Fees :</strong><br/>${formatCurrency((data.paymentHistory || []).filter(p => {
+              const s = (p.status || '').toLowerCase();
+              const m = (p.paymentMethod || '').toLowerCase();
+              return s === 'completed' || s === 'successful' || (!s && m !== 'bank_transfer' && m !== 'cheque');
+            }).reduce((sum, p) => sum + (p.amount || 0), 0) || (data.paymentHistory?.length ? 0 : (data.totalPaid || 0)))}</div>
+            <div style="text-align: center;"><strong>Unclear Fees :</strong><br/>${formatCurrency((data.paymentHistory || []).filter(p => {
+              const s = (p.status || '').toLowerCase();
+              const m = (p.paymentMethod || '').toLowerCase();
+              return s === 'pending' || s === 'uncleared' || (!s && (m === 'bank_transfer' || m === 'cheque'));
+            }).reduce((sum, p) => sum + (p.amount || 0), 0))}</div>
+            <div style="text-align: center;"><strong>Balance Fees :</strong><br/>${formatCurrency((data.totalPayable || data.amount || 0) - (data.paymentHistory || []).filter(p => {
+              const s = (p.status || '').toLowerCase();
+              const m = (p.paymentMethod || '').toLowerCase();
+              return s === 'completed' || s === 'successful' || (!s && m !== 'bank_transfer' && m !== 'cheque');
+            }).reduce((sum, p) => sum + (p.amount || 0), 0) || (data.totalPaid || 0))}</div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; margin-top: 60px; font-size: 12px; color: #1f2937;">
+            <div style="border-top: 1px solid #000; padding-top: 4px; width: 200px; text-align: center;">Student/Parent Signature</div>
+            <div style="border-top: 1px solid #000; padding-top: 4px; width: 200px; text-align: center;">Authorised Signatory</div>
           </div>
         </div>
       </body>
@@ -350,54 +432,120 @@ export default function FeeReceipt({ isOpen, onClose, data }: FeeReceiptProps) {
                   </div>
 
                   {/* Info Grid */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '20px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '24px' }}>
                     {[
-                      { label: 'Student Name', value: data.studentName },
-                      { label: 'Batch', value: data.batchName },
-                      { label: 'Payment Date', value: formatDate(data.paymentDate) },
-                      { label: 'Payment Method', value: data.paymentMethod.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) },
-                      { label: 'Email', value: data.studentEmail },
-                      { label: 'Installment', value: `#${data.installmentNumber}` },
-                    ].map((item) => (
-                      <div key={item.label}>
+                      { label: 'Reference No', value: data.receiptNumber },
+                      { label: 'Date', value: formatDate(data.paymentDate) },
+                      { label: 'Name', value: data.studentName },
+                      { label: 'Course', value: data.batchName },
+                      { label: 'Branch', value: data.branch || 'Thane' },
+                      { label: 'Email Id', value: data.studentEmail },
+                      { label: 'Contact No', value: data.studentPhone },
+                      { label: 'Method', value: data.paymentMethod, capitalize: true },
+                      { label: 'Enrollment Date', value: data.enrollmentDate ? formatDate(data.enrollmentDate) : '-' },
+                      { label: 'Address', value: data.address || '-', fullW: true },
+                      { label: 'Attendance ID', value: data.attendanceId || '-' },
+                      { label: 'Academic Session', value: data.academicSession || '2025-2026' }
+                    ].map((item: { label: string; value: string | number | undefined; capitalize?: boolean; fullW?: boolean }, i) => (
+                      <div key={i} style={item.fullW ? { gridColumn: 'span 2' } : {}}>
                         <div style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', marginBottom: '3px' }}>
                           {item.label}
                         </div>
-                        <div style={{ fontSize: '13px', fontWeight: 500, color: '#e2e8f0' }}>
-                          {item.value}
+                        <div style={{ fontSize: '13px', fontWeight: 500, color: '#e2e8f0', textTransform: item.capitalize ? 'capitalize' : 'none' }}>
+                          {item.value?.toString().replace('_', ' ')}
                         </div>
                       </div>
                     ))}
                   </div>
 
-                  {/* Amount */}
-                  <div style={{
-                    textAlign: 'center', padding: '20px',
-                    background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.08))',
-                    borderRadius: '12px', border: '1px solid rgba(99, 102, 241, 0.1)',
-                    marginBottom: '20px',
-                  }}>
-                    <div style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8' }}>
-                      Amount Paid
-                    </div>
-                    <div style={{ fontSize: '28px', fontWeight: 800, color: '#818cf8', marginTop: '4px' }}>
-                      {formatCurrency(data.amount)}
+                  {/* Proposed Fee Details Preview */}
+                  <div style={{ marginBottom: '20px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', marginBottom: '8px' }}>Proposed Fee Details</div>
+                    <div style={{ background: 'rgba(15, 23, 42, 0.4)', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(99, 102, 241, 0.1)' }}>
+                      <table style={{ width: '100%', fontSize: '12px', textAlign: 'left', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ background: 'rgba(30, 41, 59, 0.6)'}}>
+                            <th style={{ padding: '8px 12px', color: '#cbd5e1', fontWeight: 600 }}>Srno</th>
+                            <th style={{ padding: '8px 12px', color: '#cbd5e1', fontWeight: 600 }}>Particulars</th>
+                            <th style={{ padding: '8px 12px', color: '#cbd5e1', fontWeight: 600, textAlign: 'right' }}>Base Amount</th>
+                            <th style={{ padding: '8px 12px', color: '#cbd5e1', fontWeight: 600, textAlign: 'right' }}>Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td style={{ padding: '8px 12px', color: '#94a3b8' }}>1</td>
+                            <td style={{ padding: '8px 12px', color: '#e2e8f0' }}>{data.batchName}</td>
+                            <td style={{ padding: '8px 12px', color: '#e2e8f0', textAlign: 'right' }}>{formatCurrency(data.baseAmount || data.amount)}</td>
+                            <td style={{ padding: '8px 12px', color: '#e2e8f0', textAlign: 'right' }}>{formatCurrency(data.totalAmount || data.amount)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </div>
                   </div>
 
-                  {/* Footer */}
-                  <div style={{ textAlign: 'center', paddingTop: '16px', borderTop: '1px dashed rgba(99, 102, 241, 0.1)' }}>
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '6px',
-                      padding: '4px 14px', background: 'rgba(16, 185, 129, 0.1)',
-                      borderRadius: '14px', fontSize: '12px', fontWeight: 600, color: '#34d399',
-                      marginBottom: '8px',
-                    }}>
-                      ✓ Payment Confirmed
-                    </span>
-                    <p style={{ fontSize: '11px', color: '#475569', marginTop: '8px' }}>
-                      This is a computer-generated receipt. No signature required.
-                    </p>
+                  {/* Payment Details Preview */}
+                  <div style={{ marginBottom: '24px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', marginBottom: '8px' }}>Payment Details</div>
+                    <div style={{ background: 'rgba(15, 23, 42, 0.4)', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(99, 102, 241, 0.1)' }}>
+                      <table style={{ width: '100%', fontSize: '12px', textAlign: 'left', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ background: 'rgba(30, 41, 59, 0.6)'}}>
+                            <th style={{ padding: '8px 12px', color: '#cbd5e1', fontWeight: 600 }}>Due Date</th>
+                            <th style={{ padding: '8px 12px', color: '#cbd5e1', fontWeight: 600 }}>Date</th>
+                            <th style={{ padding: '8px 12px', color: '#cbd5e1', fontWeight: 600, textAlign: 'right' }}>Amount</th>
+                            <th style={{ padding: '8px 12px', color: '#cbd5e1', fontWeight: 600 }}>Receipt</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(data.paymentHistory || [{ dueDate: data.paymentDate, paymentDate: data.paymentDate, amount: data.amount, paymentMethod: data.paymentMethod, receiptNumber: data.receiptNumber, status: 'completed' }]).map((p, i) => (
+                             <tr key={i} style={{ borderTop: i > 0 ? '1px solid rgba(99, 102, 241, 0.1)' : 'none' }}>
+                               <td style={{ padding: '8px 12px', color: '#94a3b8' }}>{formatDate(p.dueDate || p.paymentDate)}</td>
+                               <td style={{ padding: '8px 12px', color: '#e2e8f0' }}>{p.paymentDate ? formatDate(p.paymentDate) : ''}</td>
+                               <td style={{ padding: '8px 12px', color: p.status === 'pending' ? '#fbbf24' : '#34d399', textAlign: 'right', fontWeight: 600 }}>{formatCurrency(p.amount || 0)}</td>
+                               <td style={{ padding: '8px 12px', color: '#818cf8', fontFamily: 'monospace' }}>{p.receiptNumber}</td>
+                             </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Summary Footer */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', padding: '16px', background: 'rgba(30, 41, 59, 0.5)', borderRadius: '12px', border: '1px solid rgba(99, 102, 241, 0.08)' }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '4px' }}>Payable</div>
+                      <div style={{ fontSize: '13px', color: '#e2e8f0', fontWeight: 600 }}>{formatCurrency(data.totalPayable || data.amount)}</div>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '4px' }}>Paid</div>
+                      <div style={{ fontSize: '13px', color: '#34d399', fontWeight: 600 }}>
+                        {formatCurrency((data.paymentHistory || []).filter(p => {
+                          const s = (p.status || '').toLowerCase();
+                          const m = (p.paymentMethod || '').toLowerCase();
+                          return s === 'completed' || s === 'successful' || (!s && m !== 'bank_transfer' && m !== 'cheque');
+                        }).reduce((sum, p) => sum + (p.amount || 0), 0) || (data.paymentHistory?.length ? 0 : (data.totalPaid || 0)))}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '4px' }}>Unclear</div>
+                      <div style={{ fontSize: '13px', color: '#fbbf24', fontWeight: 600 }}>
+                        {formatCurrency((data.paymentHistory || []).filter(p => {
+                          const s = (p.status || '').toLowerCase();
+                          const m = (p.paymentMethod || '').toLowerCase();
+                          return s === 'pending' || s === 'uncleared' || (!s && (m === 'bank_transfer' || m === 'cheque'));
+                        }).reduce((sum, p) => sum + (p.amount || 0), 0))}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '4px' }}>Balance</div>
+                      <div style={{ fontSize: '13px', color: '#f87171', fontWeight: 600 }}>
+                        {formatCurrency((data.totalPayable || data.amount || 0) - ((data.paymentHistory || []).filter(p => {
+                          const s = (p.status || '').toLowerCase();
+                          const m = (p.paymentMethod || '').toLowerCase();
+                          return s === 'completed' || s === 'successful' || (!s && m !== 'bank_transfer' && m !== 'cheque');
+                        }).reduce((sum, p) => sum + (p.amount || 0), 0) || (data.totalPaid || 0)))}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

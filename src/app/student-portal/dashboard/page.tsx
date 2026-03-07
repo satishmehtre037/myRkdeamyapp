@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { LogOut, GraduationCap, Calendar, Clock, CreditCard, Receipt, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { LogOut, Calendar, Clock, CreditCard, Receipt, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { getStudentById, getStudentInstallments, getStudentPayments } from '@/lib/api';
 import type { Student, Installment, Payment } from '@/lib/mock-data';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -541,23 +541,45 @@ function StudentDashboard() {
         </motion.div>
       </main>
 
-      {receiptPayment && (
-        <FeeReceipt 
-          isOpen={true} 
-          onClose={() => setReceiptPayment(null)}
-          data={{ 
-            receiptNumber: receiptPayment.receipt_number, 
-            studentName: student.name, 
-            studentEmail: student.email || '', 
-            studentPhone: student.phone || '', 
-            batchName: student.batch_name, 
-            amount: receiptPayment.amount, 
-            paymentDate: receiptPayment.payment_date, 
-            paymentMethod: receiptPayment.payment_method, 
-            installmentNumber: receiptPayment.installment_number 
-          }}
-        />
-      )}
+      {receiptPayment && (() => {
+        const studentPayments = payments.filter(p => p.student_id === student.id).sort((a,b) => new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime());
+        const paymentHistory = studentPayments.map(p => ({
+          dueDate: p.payment_date,
+          paymentDate: p.payment_date,
+          amount: p.amount,
+          paymentMethod: p.payment_method,
+          receiptNumber: p.receipt_number,
+          status: p.status
+        }));
+
+        return (
+          <FeeReceipt 
+            isOpen={true} 
+            onClose={() => setReceiptPayment(null)}
+            data={{ 
+              receiptNumber: receiptPayment.receipt_number, 
+              studentName: student.name, 
+              studentEmail: student.email || 'admin@rkdeamy.com', 
+              studentPhone: student.phone || '-', 
+              batchName: student.batch_name, 
+              amount: receiptPayment.amount, 
+              paymentDate: receiptPayment.payment_date, 
+              paymentMethod: receiptPayment.payment_method, 
+              installmentNumber: receiptPayment.installment_number,
+              address: 'Sec-3, Koparkhairane, Navi Mumbai',
+              attendanceId: `ATT-${student.id.split('-')[1] || '101'}`,
+              enrollmentDate: student.joined_at,
+              academicSession: '2025-2026',
+              totalPayable: student.total_fee,
+              totalPaid: student.paid_amount,
+              pendingAmount: student.pending_amount,
+              baseAmount: student.total_fee,
+              totalAmount: student.total_fee,
+              paymentHistory
+            }}
+          />
+        );
+      })()}
     </div>
   );
 }
